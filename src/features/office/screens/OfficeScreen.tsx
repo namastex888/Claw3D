@@ -1329,6 +1329,7 @@ export function OfficeScreen({
     remoteOfficeGatewayUrl,
     remoteOfficeTokenConfigured,
     setTitle: setOfficeTitle,
+    setStateAnimationMappings,
     setRemoteOfficeEnabled,
     setRemoteOfficeSourceKind,
     setRemoteOfficeLabel,
@@ -4835,11 +4836,13 @@ export function OfficeScreen({
           remoteOfficeStatusText={remoteOfficeStatusText}
           remoteLayoutSnapshot={remoteOfficeLayoutSnapshot}
           remoteOfficeTokenConfigured={remoteOfficeTokenConfigured}
+          stateAnimationMappings={stateAnimationMappings}
           voiceRepliesEnabled={voiceRepliesEnabled}
           voiceRepliesVoiceId={voiceRepliesVoiceId}
           voiceRepliesSpeed={voiceRepliesSpeed}
           voiceRepliesLoaded={voiceRepliesLoaded}
           onOfficeTitleChange={setOfficeTitle}
+          onStateAnimationMappingsChange={setStateAnimationMappings}
           onRemoteOfficeEnabledChange={setRemoteOfficeEnabled}
           onRemoteOfficeSourceKindChange={setRemoteOfficeSourceKind}
           onRemoteOfficeLabelChange={setRemoteOfficeLabel}
