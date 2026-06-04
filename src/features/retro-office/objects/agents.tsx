@@ -96,6 +96,7 @@ export const AgentModel = memo(function AgentModel({
     () => appearance ?? createDefaultAgentAvatarProfile(agentId),
     [agentId, appearance],
   );
+  const isServerGodAvatar = resolvedAppearance.seed === "drogo-server-god";
 
   useFrame(() => {
     const agent =
@@ -698,6 +699,18 @@ export const AgentModel = memo(function AgentModel({
         <circleGeometry args={[0.12, 12]} />
         <meshBasicMaterial color="#000" transparent opacity={0.2} />
       </mesh>
+      {isServerGodAvatar ? (
+        <>
+          <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.22, 0.255, 40]} />
+            <meshBasicMaterial color="#a78bfa" transparent opacity={0.62} depthWrite={false} />
+          </mesh>
+          <mesh position={[0, 0.009, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.29, 0.305, 48]} />
+            <meshBasicMaterial color="#38bdf8" transparent opacity={0.36} depthWrite={false} />
+          </mesh>
+        </>
+      ) : null}
       <group ref={rightLegRef} position={[-0.045, 0.1, 0]}>
         {bottomStyle === "shorts" ? (
           <>
@@ -1023,6 +1036,24 @@ export const AgentModel = memo(function AgentModel({
             <meshLambertMaterial color="#94a3b8" />
           </mesh>
         </>
+      ) : null}
+      {isServerGodAvatar ? (
+        <Billboard position={[0, 0.78, 0]}>
+          <mesh position={[0, 0, -0.001]}>
+            <ringGeometry args={[0.075, 0.092, 32]} />
+            <meshBasicMaterial color="#a78bfa" transparent opacity={0.9} depthWrite={false} />
+          </mesh>
+          <Text
+            position={[0, 0, 0.001]}
+            fontSize={0.095}
+            color="#f8fafc"
+            anchorX="center"
+            anchorY="middle"
+            font={undefined}
+          >
+            ∴
+          </Text>
+        </Billboard>
       ) : null}
       <mesh ref={leftBrowRef} position={[-0.04, 0.52, 0.074]}>
         <boxGeometry args={[0.04, 0.01, 0.01]} />

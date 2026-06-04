@@ -228,6 +228,28 @@ import type { OfficeCleaningCue } from "@/lib/office/janitorReset";
 
 type OfficeDeskMonitorMap = Record<string, OfficeDeskMonitor>;
 type RenderAgentUiSnapshot = Pick<RenderAgent, "state" | "status">;
+
+const areRenderAgentUiSnapshotsEqual = (
+  left: Record<string, RenderAgentUiSnapshot>,
+  right: Record<string, RenderAgentUiSnapshot>,
+): boolean => {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+  for (const key of leftKeys) {
+    const leftSnapshot = left[key];
+    const rightSnapshot = right[key];
+    if (!rightSnapshot) return false;
+    if (
+      leftSnapshot.state !== rightSnapshot.state ||
+      leftSnapshot.status !== rightSnapshot.status
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+
 type FeedEvent = {
   id: string;
   name: string;
@@ -2530,19 +2552,6 @@ export function RetroOffice3D({
           : defaultRemoteLayoutFurniture,
     [defaultRemoteLayoutFurniture, remoteLayoutSnapshot, remoteOfficeEnabled],
   );
-  useEffect(() => {
-    setFurniture(
-      buildInitialFurnitureLayout(storageNamespace, layoutPreset).filter(
-        (item) => !isRetiredPingPongLamp(item),
-      ),
-    );
-    setSelectedUid(null);
-    setDeskActionUid(null);
-    setDeskAssignPickerOpen(false);
-    setDrag({ kind: "idle" });
-    setGhostPos(null);
-    setWallDrawStart(null);
-  }, [layoutPreset, storageNamespace]);
   const [editMode, setEditMode] = useState(false);
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
   const [hoverUid, setHoverUid] = useState<string | null>(null);
@@ -2560,20 +2569,39 @@ export function RetroOffice3D({
   const [standupBoardOpen, setStandupBoardOpen] = useState(false);
   const [activeKanbanUid, setActiveKanbanUid] = useState<string | null>(null);
   const [agentRosterOpen, setAgentRosterOpen] = useState(false);
+  const [deskActionUid, setDeskActionUid] = useState<string | null>(null);
+  const [deskAssignPickerOpen, setDeskAssignPickerOpen] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset editor layout when namespace/preset changes.
+    setFurniture(
+      buildInitialFurnitureLayout(storageNamespace, layoutPreset).filter(
+        (item) => !isRetiredPingPongLamp(item),
+      ),
+    );
+    setSelectedUid(null);
+    setDeskActionUid(null);
+    setDeskAssignPickerOpen(false);
+    setDrag({ kind: "idle" });
+    setGhostPos(null);
+    setWallDrawStart(null);
+  }, [layoutPreset, storageNamespace]);
   const autoOpenedStandupIdRef = useRef<string | null>(null);
   // Idea 1 (original): hovered agent for tooltip overlay.
   const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null);
   const [renderAgentUiById, setRenderAgentUiById] = useState<
     Record<string, RenderAgentUiSnapshot>
   >({});
+  const renderAgentUiByIdRef = useRef(renderAgentUiById);
+  useEffect(() => {
+    renderAgentUiByIdRef.current = renderAgentUiById;
+  }, [renderAgentUiById]);
   // New Idea 1: right-click context menu.
   const [contextMenu, setContextMenu] = useState<{
     id: string;
     x: number;
     y: number;
   } | null>(null);
-  const [deskActionUid, setDeskActionUid] = useState<string | null>(null);
-  const [deskAssignPickerOpen, setDeskAssignPickerOpen] = useState(false);
   // New Idea 3: speech bubble agent IDs.
   const [speechAgentIds, setSpeechAgentIds] = useState<Set<string>>(new Set());
   const statusFeedEvents = useMemo(
@@ -2656,6 +2684,7 @@ export function RetroOffice3D({
   const seenCleaningCueIdsRef = useRef<Set<string>>(new Set());
   // E3 Idea 3: spotlight.
   const [spotlightAgentId, setSpotlightAgentId] = useState<string | null>(null);
+  const [selectedControlAgentId, setSelectedControlAgentId] = useState<string | null>(null);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orbitRef = useRef<any>(null);
@@ -2870,6 +2899,9 @@ export function RetroOffice3D({
           status: agent.status,
         };
       }
+      const previous = renderAgentUiByIdRef.current;
+      if (areRenderAgentUiSnapshotsEqual(previous, next)) return;
+      renderAgentUiByIdRef.current = next;
       setRenderAgentUiById(next);
     };
 
@@ -2909,6 +2941,13 @@ export function RetroOffice3D({
         : null,
     [agents, hoveredAgentId],
   );
+  const selectedControlAgent = useMemo(
+    () =>
+      selectedControlAgentId
+        ? (agents.find((agent) => agent.id === selectedControlAgentId) ?? null)
+        : null,
+    [agents, selectedControlAgentId],
+  );
   const hoveredAgentStatus = hoveredAgentId
     ? (agentStatusLookup[hoveredAgentId] ?? null)
     : null;
@@ -2925,9 +2964,10 @@ export function RetroOffice3D({
       const [wx, , wz] = toWorld(agent.x, agent.y);
       orbitRef.current.target.set(wx, 0, wz);
       orbitRef.current.update();
-      onAgentChatSelect?.(agentId);
+      setSpotlightAgentId(agentId);
+      setSelectedControlAgentId(agentId);
     },
-    [onAgentChatSelect, renderAgentLookupRef],
+    [renderAgentLookupRef],
   );
   const handleAgentContextMenu = useCallback(
     (agentId: string, x: number, y: number) => {
@@ -3068,6 +3108,30 @@ export function RetroOffice3D({
   );
   const [githubCommandArrived, setGithubCommandArrived] = useState(false);
   const [qaCommandArrived, setQaCommandArrived] = useState(false);
+  const githubCommandArrivedRef = useRef(githubCommandArrived);
+  const qaCommandArrivedRef = useRef(qaCommandArrived);
+  const phoneBoothCommandArrivedRef = useRef(phoneBoothCommandArrived);
+  const phoneBoothDoorOpenRef = useRef(phoneBoothDoorOpen);
+  const smsBoothCommandArrivedRef = useRef(smsBoothCommandArrived);
+  const smsBoothDoorOpenRef = useRef(smsBoothDoorOpen);
+  useEffect(() => {
+    githubCommandArrivedRef.current = githubCommandArrived;
+  }, [githubCommandArrived]);
+  useEffect(() => {
+    qaCommandArrivedRef.current = qaCommandArrived;
+  }, [qaCommandArrived]);
+  useEffect(() => {
+    phoneBoothCommandArrivedRef.current = phoneBoothCommandArrived;
+  }, [phoneBoothCommandArrived]);
+  useEffect(() => {
+    phoneBoothDoorOpenRef.current = phoneBoothDoorOpen;
+  }, [phoneBoothDoorOpen]);
+  useEffect(() => {
+    smsBoothCommandArrivedRef.current = smsBoothCommandArrived;
+  }, [smsBoothCommandArrived]);
+  useEffect(() => {
+    smsBoothDoorOpenRef.current = smsBoothDoorOpen;
+  }, [smsBoothDoorOpen]);
   const githubImmersive =
     Boolean(
       activeGithubTerminal &&
@@ -3605,8 +3669,39 @@ export function RetroOffice3D({
     const syncArrivalState = () => {
       const agentLookup = renderAgentLookupRef.current;
 
+      const updateGithubCommandArrived = (nextValue: boolean) => {
+        if (githubCommandArrivedRef.current === nextValue) return;
+        githubCommandArrivedRef.current = nextValue;
+        setGithubCommandArrived(nextValue);
+      };
+      const updateQaCommandArrived = (nextValue: boolean) => {
+        if (qaCommandArrivedRef.current === nextValue) return;
+        qaCommandArrivedRef.current = nextValue;
+        setQaCommandArrived(nextValue);
+      };
+      const updatePhoneBoothCommandArrived = (nextValue: boolean) => {
+        if (phoneBoothCommandArrivedRef.current === nextValue) return;
+        phoneBoothCommandArrivedRef.current = nextValue;
+        setPhoneBoothCommandArrived(nextValue);
+      };
+      const updatePhoneBoothDoorOpen = (nextValue: boolean) => {
+        if (phoneBoothDoorOpenRef.current === nextValue) return;
+        phoneBoothDoorOpenRef.current = nextValue;
+        setPhoneBoothDoorOpen(nextValue);
+      };
+      const updateSmsBoothCommandArrived = (nextValue: boolean) => {
+        if (smsBoothCommandArrivedRef.current === nextValue) return;
+        smsBoothCommandArrivedRef.current = nextValue;
+        setSmsBoothCommandArrived(nextValue);
+      };
+      const updateSmsBoothDoorOpen = (nextValue: boolean) => {
+        if (smsBoothDoorOpenRef.current === nextValue) return;
+        smsBoothDoorOpenRef.current = nextValue;
+        setSmsBoothDoorOpen(nextValue);
+      };
+
       if (!githubReviewAgentId) {
-        setGithubCommandArrived(false);
+        updateGithubCommandArrived(false);
       } else {
         const agent = agentLookup.get(githubReviewAgentId);
         const arrived = Boolean(
@@ -3616,13 +3711,11 @@ export function RetroOffice3D({
             agent.y - SERVER_ROOM_TARGET.y,
           ) < 16,
         );
-        setGithubCommandArrived((current) =>
-          current === arrived ? current : arrived,
-        );
+        updateGithubCommandArrived(arrived);
       }
 
       if (!qaTestingAgentId) {
-        setQaCommandArrived(false);
+        updateQaCommandArrived(false);
       } else {
         const agent = agentLookup.get(qaTestingAgentId);
         const arrived = Boolean(
@@ -3631,15 +3724,13 @@ export function RetroOffice3D({
           agent.qaLabStage === "station" &&
           Math.hypot(agent.x - agent.targetX, agent.y - agent.targetY) < 16,
         );
-        setQaCommandArrived((current) =>
-          current === arrived ? current : arrived,
-        );
+        updateQaCommandArrived(arrived);
       }
 
       if (!phoneBoothAgentId) {
-        setPhoneBoothCommandArrived(false);
+        updatePhoneBoothCommandArrived(false);
         if (!manualPhoneBoothOpen) {
-          setPhoneBoothDoorOpen(false);
+          updatePhoneBoothDoorOpen(false);
         }
       } else {
         const agent = agentLookup.get(phoneBoothAgentId);
@@ -3655,18 +3746,14 @@ export function RetroOffice3D({
           agent.phoneBoothStage !== undefined &&
           agent.phoneBoothStage !== "door_outer",
         );
-        setPhoneBoothCommandArrived((current) =>
-          current === arrived ? current : arrived,
-        );
-        setPhoneBoothDoorOpen((current) =>
-          current === doorOpen ? current : doorOpen,
-        );
+        updatePhoneBoothCommandArrived(arrived);
+        updatePhoneBoothDoorOpen(doorOpen);
       }
 
       if (!smsBoothAgentId) {
-        setSmsBoothCommandArrived(false);
+        updateSmsBoothCommandArrived(false);
         if (!manualSmsBoothOpen) {
-          setSmsBoothDoorOpen(false);
+          updateSmsBoothDoorOpen(false);
         }
       } else {
         const agent = agentLookup.get(smsBoothAgentId);
@@ -3682,12 +3769,8 @@ export function RetroOffice3D({
           agent.smsBoothStage !== undefined &&
           agent.smsBoothStage !== "door_outer",
         );
-        setSmsBoothCommandArrived((current) =>
-          current === arrived ? current : arrived,
-        );
-        setSmsBoothDoorOpen((current) =>
-          current === doorOpen ? current : doorOpen,
-        );
+        updateSmsBoothCommandArrived(arrived);
+        updateSmsBoothDoorOpen(doorOpen);
       }
 
       if (!standupActive || !standupMeeting) {
@@ -5834,6 +5917,14 @@ export function RetroOffice3D({
       {/* New Idea 2: Camera preset buttons — top left. */}
       {!readOnly && !immersiveOverlayActive ? (
         <div className="absolute top-3 left-3 z-20 flex flex-col items-start gap-2">
+          <div className="rounded-xl border border-violet-300/20 bg-[#090812]/90 px-3 py-2 text-left shadow-lg backdrop-blur-sm">
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-violet-200/80">
+              Skyview Control
+            </div>
+            <div className="mt-1 text-[11px] font-semibold text-white/90">
+              Drogo server-god projection
+            </div>
+          </div>
           <div className="flex items-center gap-1">
             {(
               [
@@ -5924,7 +6015,6 @@ export function RetroOffice3D({
                 const status = agentStatusLookup[agent.id];
                 const isError = status?.isError ?? agent.status === "error";
                 const working = status?.working ?? agent.status === "working";
-                const isRemoteAgent = isRemoteOfficeAgentId(agent.id);
                 const mood = moodByAgentId[agent.id];
                 const dotClass = isError
                   ? "bg-red-400"
@@ -5940,9 +6030,7 @@ export function RetroOffice3D({
                     onMouseLeave={handleAgentUnhover}
                     onClick={() => {
                       setSpotlightAgentId(agent.id);
-                      if (!isRemoteAgent) {
-                        onAgentEdit?.(agent.id);
-                      }
+                      setSelectedControlAgentId(agent.id);
                     }}
                     className={`relative flex h-8 w-8 items-center justify-center rounded-full border text-[9px] font-bold text-[#120e08] shadow transition-transform hover:-translate-y-0.5 ${
                       spotlightAgentId === agent.id
@@ -6034,9 +6122,7 @@ export function RetroOffice3D({
                         type="button"
                         onClick={() => {
                           setSpotlightAgentId(agent.id);
-                          if (!isRemoteAgent) {
-                            onAgentEdit?.(agent.id);
-                          }
+                          setSelectedControlAgentId(agent.id);
                           setAgentRosterOpen(false);
                         }}
                         className="flex min-w-0 flex-1 items-center gap-3 text-left"
@@ -6127,6 +6213,87 @@ export function RetroOffice3D({
               </div>
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {!readOnly && !immersiveOverlayActive && selectedControlAgent ? (
+        <div className="absolute right-4 top-20 z-30 w-[min(92vw,360px)] rounded-2xl border border-violet-300/20 bg-[#080711]/95 p-4 text-white shadow-2xl backdrop-blur-md">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-violet-200/75">
+                Agent Inspector
+              </div>
+              <div className="mt-1 text-lg font-bold text-white">
+                {selectedControlAgent.name}
+              </div>
+              <div className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-violet-100/75">
+                {selectedControlAgent.projection?.roleLabel ??
+                  selectedControlAgent.subtitle ??
+                  selectedControlAgent.item}
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label="Close agent inspector"
+              onClick={() => setSelectedControlAgentId(null)}
+              className="rounded-full border border-white/10 px-2 py-1 text-[11px] text-white/60 transition-colors hover:border-white/30 hover:text-white"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-2 font-mono text-[11px] text-white/75">
+            <div className="flex justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+              <span className="uppercase tracking-[0.16em] text-white/40">source</span>
+              <span>{selectedControlAgent.projection?.sourceLabel ?? "runtime"}</span>
+            </div>
+            <div className="flex justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+              <span className="uppercase tracking-[0.16em] text-white/40">truth</span>
+              <span>{selectedControlAgent.projection?.truth ?? "OBSERVED"}</span>
+            </div>
+            <div className="flex justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+              <span className="uppercase tracking-[0.16em] text-white/40">runtime id</span>
+              <span className="truncate" title={selectedControlAgent.id}>
+                {selectedControlAgent.projection?.runtimeAgentId ?? selectedControlAgent.id}
+              </span>
+            </div>
+            <div className="flex justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+              <span className="uppercase tracking-[0.16em] text-white/40">presence</span>
+              <span>
+                {selectedControlAgent.projection?.omnipresent ? "omnipresent" : "room-scoped"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+              <span className="uppercase tracking-[0.16em] text-white/40">status</span>
+              <span>{selectedControlAgent.status}</span>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onAgentChatSelect?.(selectedControlAgent.id)}
+              className="rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-100 transition-colors hover:border-violet-200/50 hover:bg-violet-300/20"
+            >
+              Open chat
+            </button>
+            <button
+              type="button"
+              onClick={() => onMonitorSelect?.(selectedControlAgent.id)}
+              className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-100 transition-colors hover:border-cyan-200/45 hover:bg-cyan-300/20"
+            >
+              Monitor
+            </button>
+            {!isRemoteOfficeAgentId(selectedControlAgent.id) && selectedControlAgent.projection?.kind !== "server-god" ? (
+              <button
+                type="button"
+                onClick={() => onAgentEdit?.(selectedControlAgent.id)}
+                className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70 transition-colors hover:border-white/35 hover:text-white"
+              >
+                Edit
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

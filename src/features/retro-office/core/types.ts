@@ -1,4 +1,5 @@
 import type { AgentAvatarProfile } from "@/lib/avatars/profile";
+import type { RuntimeProjectionMetadata } from "@/lib/world/runtimeProjection";
 import type { OfficeInteractionTargetId } from "@/lib/office/places";
 
 export type OfficeAgent = {
@@ -9,6 +10,7 @@ export type OfficeAgent = {
   color: string;
   item: string;
   avatarProfile?: AgentAvatarProfile | null;
+  projection?: RuntimeProjectionMetadata | null;
 };
 
 export type JanitorTool = "broom" | "vacuum" | "floor_scrubber";

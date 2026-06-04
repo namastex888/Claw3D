@@ -74,6 +74,7 @@ import {
 import {
   buildFloorRosterState,
   createFloorRosterCache,
+  type FloorRosterState,
 } from "@/lib/office/floorRoster";
 import {
   getOfficeFloor,
@@ -127,6 +128,7 @@ import {
   createDefaultAgentAvatarProfile,
   type AgentAvatarProfile,
 } from "@/lib/avatars/profile";
+import { resolveRuntimeProjection } from "@/lib/world/runtimeProjection";
 import {
   createEmptyPersonalityDraft,
   serializePersonalityFiles,
@@ -208,7 +210,6 @@ import {
 import { deriveSkillReadinessState } from "@/lib/skills/presentation";
 import type { StandupAgentSnapshot } from "@/lib/office/standup/types";
 import type { SkillStatusEntry } from "@/lib/skills/types";
-
 const stringToColor = (str: string) => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -217,6 +218,17 @@ const stringToColor = (str: string) => {
   const c = (hash & 0x00ffffff).toString(16).toUpperCase();
   return "#" + "00000".substring(0, 6 - c.length) + c;
 };
+
+const areFloorRosterStatesEqual = (
+  left: FloorRosterState,
+  right: FloorRosterState,
+): boolean =>
+  left.floorId === right.floorId &&
+  left.provider === right.provider &&
+  left.status === right.status &&
+  left.selectedAgentId === right.selectedAgentId &&
+  left.error === right.error &&
+  JSON.stringify(left.entries) === JSON.stringify(right.entries);
 
 const ITEMS = [
   "globe",
@@ -565,27 +577,28 @@ const getDeterministicItem = (id: string) => {
   return ITEMS[Math.abs(hash) % ITEMS.length];
 };
 
-const mapAgentToOffice = (agent: AgentState): OfficeAgent => {
-  if (agent.status === "error") {
-    return {
-      id: agent.agentId,
-      name: agent.name || "Unknown",
-      subtitle: agent.role ?? null,
-      status: "error",
-      color: stringToColor(agent.agentId),
-      item: getDeterministicItem(agent.agentId),
-      avatarProfile: agent.avatarProfile ?? null,
-    };
-  }
-  const isWorking = agent.status === "running" || Boolean(agent.runId);
+const mapAgentToOffice = (
+  agent: AgentState,
+  options: { activeAdapterType?: StudioGatewayAdapterType | null } = {},
+): OfficeAgent => {
+  const runtimeProjection = resolveRuntimeProjection(agent, {
+    activeAdapterType: options.activeAdapterType,
+  });
+  const status =
+    agent.status === "error"
+      ? "error"
+      : agent.status === "running" || Boolean(agent.runId)
+        ? "working"
+        : "idle";
   return {
-    id: agent.agentId,
-    name: agent.name || "Unknown",
-    subtitle: agent.role ?? null,
-    status: isWorking ? "working" : "idle",
-    color: stringToColor(agent.agentId),
-    item: getDeterministicItem(agent.agentId),
-    avatarProfile: agent.avatarProfile ?? null,
+    id: runtimeProjection.id,
+    name: runtimeProjection.name,
+    subtitle: runtimeProjection.subtitle,
+    status,
+    color: runtimeProjection.color ?? stringToColor(agent.agentId),
+    item: runtimeProjection.item ?? getDeterministicItem(agent.agentId),
+    avatarProfile: runtimeProjection.avatarProfile,
+    projection: runtimeProjection.projection,
   };
 };
 
@@ -1009,6 +1022,7 @@ export function OfficeScreen({
       string,
       {
         agent: AgentState;
+        activeAdapterType: StudioGatewayAdapterType;
         deskHeld: boolean;
         gymHeld: boolean;
         latchedWorking: boolean;
@@ -1250,7 +1264,7 @@ export function OfficeScreen({
         gatewayUrl.trim() === pendingFloorRuntimeSwitch.gatewayUrl &&
         token === pendingFloorRuntimeSwitch.token;
       if (runtimeMatchesTarget) {
-        setPendingFloorRuntimeSwitch(null);
+        setPendingFloorRuntimeSwitch((current) => (current ? null : current));
         return;
       }
       disconnect();
@@ -1310,11 +1324,13 @@ export function OfficeScreen({
   }, [state.agents]);
   useEffect(() => {
     const now = Date.now();
-    setDanceUntilByAgentId((previous) =>
-      Object.fromEntries(
-        Object.entries(previous).filter(([, until]) => until > now),
-      ),
-    );
+    setDanceUntilByAgentId((previous) => {
+      const currentEntries = Object.entries(previous);
+      if (currentEntries.length === 0) return previous;
+      const liveEntries = currentEntries.filter(([, until]) => until > now);
+      if (liveEntries.length === currentEntries.length) return previous;
+      return Object.fromEntries(liveEntries);
+    });
   }, [state.agents]);
   useEffect(() => {
     return () => {
@@ -1497,11 +1513,22 @@ export function OfficeScreen({
       setSelectedAdapterType(adapterType);
       setGatewayUrl(nextGatewayUrl);
       setToken(nextToken);
-      setPendingFloorRuntimeSwitch({
-        floorId: resolved,
-        adapterType,
-        gatewayUrl: nextGatewayUrl,
-        token: nextToken,
+      setPendingFloorRuntimeSwitch((current) => {
+        if (
+          current &&
+          current.floorId === resolved &&
+          current.adapterType === adapterType &&
+          current.gatewayUrl === nextGatewayUrl &&
+          current.token === nextToken
+        ) {
+          return current;
+        }
+        return {
+          floorId: resolved,
+          adapterType,
+          gatewayUrl: nextGatewayUrl,
+          token: nextToken,
+        };
       });
 
       const preferredAgentId =
@@ -1553,17 +1580,27 @@ export function OfficeScreen({
     if (pendingFloorRuntimeSwitch?.floorId === activeFloor.id) {
       return;
     }
-    setFloorRosterCache((previous) => ({
-      ...previous,
-      [activeFloor.id]: buildFloorRosterState({
+    setFloorRosterCache((previous) => {
+      const nextFloorRoster = buildFloorRosterState({
         floorId: activeFloor.id,
         hydratedAt: Date.now(),
         result: {
           seeds: state.agents,
           suggestedSelectedAgentId: state.selectedAgentId ?? previous[activeFloor.id]?.selectedAgentId ?? null,
         },
-      }),
-    }));
+      });
+      const currentFloorRoster = previous[activeFloor.id];
+      if (
+        currentFloorRoster &&
+        areFloorRosterStatesEqual(currentFloorRoster, nextFloorRoster)
+      ) {
+        return previous;
+      }
+      return {
+        ...previous,
+        [activeFloor.id]: nextFloorRoster,
+      };
+    });
   }, [activeFloor.id, agentsLoaded, pendingFloorRuntimeSwitch, state.agents, state.selectedAgentId]);
 
   const handleDeskAssignmentChange = useCallback(
@@ -4219,6 +4256,7 @@ export function OfficeScreen({
       string,
       {
         agent: AgentState;
+        activeAdapterType: StudioGatewayAdapterType;
         deskHeld: boolean;
         gymHeld: boolean;
         latchedWorking: boolean;
@@ -4239,6 +4277,7 @@ export function OfficeScreen({
       if (
         cached &&
         cached.agent === agent &&
+        cached.activeAdapterType === activeAdapterType &&
         cached.latchedWorking === latchedWorking &&
         cached.deskHeld === deskHeld &&
         cached.gymHeld === gymHeld &&
@@ -4274,9 +4313,10 @@ export function OfficeScreen({
                       : `desk-hold-${agent.agentId}`),
               }
             : agent;
-      const officeAgent = mapAgentToOffice(effectiveAgent);
+      const officeAgent = mapAgentToOffice(effectiveAgent, { activeAdapterType });
       nextCache.set(agent.agentId, {
         agent,
+        activeAdapterType,
         deskHeld,
         gymHeld,
         latchedWorking,
@@ -4290,6 +4330,7 @@ export function OfficeScreen({
     officeAgentCacheRef.current = nextCache;
     return nextOfficeAgents;
   }, [
+    activeAdapterType,
     clockTick,
     deskHoldByAgentId,
     gymHoldByAgentId,
