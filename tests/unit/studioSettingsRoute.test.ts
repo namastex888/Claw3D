@@ -36,6 +36,101 @@ describe("studio settings route", () => {
     expect(body.settings?.version).toBe(1);
   });
 
+  it("GET returns host-context gateway defaults for local browser contexts", async () => {
+    tempDir = makeTempDir("studio-settings-get-local-context-defaults");
+    process.env.OPENCLAW_STATE_DIR = tempDir;
+
+    const response = await GET(
+      new Request("http://localhost:3040/api/studio", {
+        headers: { host: "localhost:3040" },
+      })
+    );
+    const body = (await response.json()) as {
+      settings?: {
+        gateway?: {
+          url?: string;
+          tokenConfigured?: boolean;
+          adapterType?: string;
+          profiles?: Record<string, { url?: string; tokenConfigured?: boolean }>;
+        } | null;
+      };
+      localGatewayDefaults?: {
+        url?: string;
+        tokenConfigured?: boolean;
+        adapterType?: string;
+        profiles?: Record<string, { url?: string; tokenConfigured?: boolean }>;
+      } | null;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.settings?.gateway).toEqual({
+      url: "ws://localhost:18789",
+      tokenConfigured: false,
+      adapterType: "hermes",
+      profiles: {
+        hermes: {
+          url: "ws://localhost:18789",
+          tokenConfigured: false,
+        },
+      },
+    });
+    expect(body.localGatewayDefaults).toEqual(body.settings?.gateway);
+  });
+
+  it("GET rewrites stale loopback settings to the tailnet request host", async () => {
+    tempDir = makeTempDir("studio-settings-get-tailnet-context-defaults");
+    process.env.OPENCLAW_STATE_DIR = tempDir;
+    fs.mkdirSync(path.join(tempDir, "claw3d"), { recursive: true });
+    fs.writeFileSync(
+      path.join(tempDir, "claw3d", "settings.json"),
+      JSON.stringify(
+        { gateway: { url: "ws://localhost:18789", token: "", adapterType: "demo" } },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const response = await GET(
+      new Request("https://khal-1.nebulosa-cirius.ts.net/api/studio", {
+        headers: {
+          host: "khal-1.nebulosa-cirius.ts.net",
+          "x-forwarded-proto": "https",
+        },
+      })
+    );
+    const body = (await response.json()) as {
+      settings?: {
+        gateway?: {
+          url?: string;
+          tokenConfigured?: boolean;
+          adapterType?: string;
+          profiles?: Record<string, { url?: string; tokenConfigured?: boolean }>;
+        } | null;
+      };
+      localGatewayDefaults?: {
+        url?: string;
+        tokenConfigured?: boolean;
+        adapterType?: string;
+        profiles?: Record<string, { url?: string; tokenConfigured?: boolean }>;
+      } | null;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.settings?.gateway).toEqual({
+      url: "wss://khal-1.nebulosa-cirius.ts.net:18789",
+      tokenConfigured: false,
+      adapterType: "hermes",
+      profiles: {
+        hermes: {
+          url: "wss://khal-1.nebulosa-cirius.ts.net:18789",
+          tokenConfigured: false,
+        },
+      },
+    });
+    expect(body.localGatewayDefaults).toEqual(body.settings?.gateway);
+  });
+
   it("GET returns local gateway defaults from openclaw.json", async () => {
     tempDir = makeTempDir("studio-settings-get-local-defaults");
     process.env.OPENCLAW_STATE_DIR = tempDir;

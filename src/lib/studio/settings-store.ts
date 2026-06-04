@@ -20,6 +20,8 @@ const SETTINGS_DIRNAME = "claw3d";
 const SETTINGS_FILENAME = "settings.json";
 const OPENCLAW_CONFIG_FILENAME = "openclaw.json";
 const DEFAULT_LOCAL_GATEWAY_PORT = 18789;
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const CONTEXT_GATEWAY_PORT = 18789;
 
 export const resolveStudioSettingsPath = () =>
   path.join(resolveStateDir(), SETTINGS_DIRNAME, SETTINGS_FILENAME);
@@ -95,6 +97,91 @@ const readPortBasedGatewayProfile = (
   return buildLocalProfile(`ws://localhost:${port}`);
 };
 
+const firstHeaderValue = (value: string | null): string =>
+  value?.split(",")[0]?.trim() ?? "";
+
+const isLoopbackHostname = (hostname: string): boolean =>
+  LOOPBACK_HOSTS.has(hostname.toLowerCase());
+
+const isLoopbackGatewayUrl = (url: string | undefined | null): boolean => {
+  try {
+    const parsed = new URL(String(url ?? "").trim());
+    return isLoopbackHostname(parsed.hostname);
+  } catch {
+    return false;
+  }
+};
+
+const resolveRequestHostname = (request: Request): { hostname: string; secure: boolean } | null => {
+  try {
+    const requestUrl = new URL(request.url);
+    const forwardedHost = firstHeaderValue(request.headers.get("x-forwarded-host"));
+    const host = forwardedHost || firstHeaderValue(request.headers.get("host")) || requestUrl.host;
+    if (!host) return null;
+    const forwardedProto = firstHeaderValue(request.headers.get("x-forwarded-proto"));
+    const protocol = forwardedProto || requestUrl.protocol.replace(/:$/, "") || "http";
+    const hostUrl = new URL(`${protocol === "https" ? "https" : "http"}://${host}`);
+    return {
+      hostname: hostUrl.hostname,
+      secure: protocol === "https" || requestUrl.protocol === "https:",
+    };
+  } catch {
+    return null;
+  }
+};
+
+export const buildContextGatewayDefaults = (request?: Request | null): StudioGatewaySettings | null => {
+  if (!request) return null;
+  const context = resolveRequestHostname(request);
+  if (!context?.hostname) return null;
+  const gatewayHost = isLoopbackHostname(context.hostname) ? "localhost" : context.hostname;
+  const scheme = context.secure && !isLoopbackHostname(context.hostname) ? "wss" : "ws";
+  const url = `${scheme}://${gatewayHost}:${CONTEXT_GATEWAY_PORT}`;
+  const adapterType = normalizeAdapterType(process.env.CLAW3D_GATEWAY_ADAPTER_TYPE) ?? "hermes";
+  const token = process.env.CLAW3D_GATEWAY_TOKEN?.trim() ?? "";
+  return buildGatewaySettings({
+    adapterType,
+    url,
+    token,
+    profiles: {
+      [adapterType]: buildLocalProfile(url, token),
+    },
+  });
+};
+
+const applyGatewayContext = (
+  settings: StudioSettings,
+  contextGateway: StudioGatewaySettings | null
+): StudioSettings => {
+  if (!contextGateway) return settings;
+  const currentGateway = settings.gateway;
+  if (!currentGateway) {
+    return { ...settings, gateway: contextGateway };
+  }
+
+  const contextIsRemote = !isLoopbackGatewayUrl(contextGateway.url);
+  const currentIsLoopback = isLoopbackGatewayUrl(currentGateway.url);
+  if (!contextIsRemote || !currentIsLoopback) {
+    return settings;
+  }
+  const currentToken = currentGateway.token?.trim() ?? "";
+  const activeAdapterType = currentToken ? currentGateway.adapterType : contextGateway.adapterType;
+
+  return {
+    ...settings,
+    gateway: {
+      ...currentGateway,
+      url: contextGateway.url,
+      token: currentToken || contextGateway.token,
+      adapterType: activeAdapterType,
+      profiles: {
+        ...(currentGateway.profiles ?? {}),
+        ...(contextGateway.profiles ?? {}),
+      },
+    },
+  };
+};
+
 const buildEnvGatewayDefaults = (): StudioGatewaySettings | null => {
   const envUrl = process.env.CLAW3D_GATEWAY_URL?.trim();
   const envToken = process.env.CLAW3D_GATEWAY_TOKEN?.trim() ?? "";
@@ -166,6 +253,17 @@ export const loadLocalGatewayDefaults = (): StudioGatewaySettings | null => {
   return null;
 };
 
+export const loadLocalGatewayDefaultsForRequest = (
+  request?: Request | null
+): StudioGatewaySettings | null => {
+  const localDefaults = loadLocalGatewayDefaults();
+  const contextDefaults = buildContextGatewayDefaults(request);
+  if (!contextDefaults) return localDefaults;
+  if (isLoopbackGatewayUrl(contextDefaults.url) && localDefaults) return localDefaults;
+  if (localDefaults) return mergeGatewayProfiles(contextDefaults, localDefaults);
+  return contextDefaults;
+};
+
 export const loadStudioSettings = (): StudioSettings => {
   const settingsPath = resolveStudioSettingsPath();
   if (!fs.existsSync(settingsPath)) {
@@ -192,6 +290,10 @@ export const loadStudioSettings = (): StudioSettings => {
     }
   }
   return settings;
+};
+
+export const loadStudioSettingsForRequest = (request?: Request | null): StudioSettings => {
+  return applyGatewayContext(loadStudioSettings(), buildContextGatewayDefaults(request));
 };
 
 export const saveStudioSettings = (next: StudioSettings) => {

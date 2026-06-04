@@ -7,8 +7,8 @@ import {
 } from "@/lib/studio/settings";
 import {
   applyStudioSettingsPatch,
-  loadLocalGatewayDefaults,
-  loadStudioSettings,
+  loadLocalGatewayDefaultsForRequest,
+  loadStudioSettingsForRequest,
 } from "@/lib/studio/settings-store";
 
 export const runtime = "nodejs";
@@ -16,10 +16,10 @@ export const runtime = "nodejs";
 const isPatch = (value: unknown): value is StudioSettingsPatch =>
   Boolean(value && typeof value === "object");
 
-export async function GET() {
+export async function GET(request?: Request) {
   try {
-    const settings = loadStudioSettings();
-    const localGatewayDefaults = loadLocalGatewayDefaults();
+    const settings = loadStudioSettingsForRequest(request);
+    const localGatewayDefaults = loadLocalGatewayDefaultsForRequest(request);
     return NextResponse.json(
       {
         settings: sanitizeStudioSettings(settings),
@@ -51,7 +51,7 @@ export async function PUT(request: Request) {
     return NextResponse.json(
       {
         settings: sanitizeStudioSettings(settings),
-        localGatewayDefaults: sanitizeStudioGatewaySettings(loadLocalGatewayDefaults()),
+        localGatewayDefaults: sanitizeStudioGatewaySettings(loadLocalGatewayDefaultsForRequest(request)),
         // gatewayPrivate intentionally omitted — see GET handler comment.
       },
       { headers: { "Cache-Control": "no-store" } }
