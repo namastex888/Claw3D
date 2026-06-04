@@ -1,0 +1,229 @@
+{
+  "url": "http://127.0.0.1:3060/office",
+  "screenshot": "docs/hermes/evidence/drogo-skyview-console-gate-20260604.png",
+  "visible": {
+    "hermesConnected": true,
+    "skyview": true,
+    "drogo": true,
+    "serverGod": true,
+    "sourceHermes": true,
+    "truthObserved": true,
+    "runtimeHermes": true,
+    "omnipresent": true,
+    "noVisibleCrash": true
+  },
+  "strict": {
+    "pageErrors": 0,
+    "httpErrors": 0,
+    "appRelevantWarningsOrErrors": 3
+  },
+  "eventSummary": {
+    "console:warning": 7,
+    "console:debug": 8,
+    "console:log": 2
+  },
+  "appRelevantEvents": [
+    {
+      "type": "console",
+      "level": "warning",
+      "text": "THREE.THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.",
+      "location": {
+        "url": "http://127.0.0.1:3060/_next/static/chunks/42ca0d57f12858bc.js",
+        "lineNumber": 61,
+        "columnNumber": 14902
+      }
+    },
+    {
+      "type": "console",
+      "level": "warning",
+      "text": "THREE.THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.",
+      "location": {
+        "url": "http://127.0.0.1:3060/_next/static/chunks/42ca0d57f12858bc.js",
+        "lineNumber": 61,
+        "columnNumber": 14902
+      }
+    },
+    {
+      "type": "console",
+      "level": "warning",
+      "text": "THREE.THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.",
+      "location": {
+        "url": "http://127.0.0.1:3060/_next/static/chunks/42ca0d57f12858bc.js",
+        "lineNumber": 61,
+        "columnNumber": 14902
+      }
+    }
+  ],
+  "rawEvents": [
+    {
+      "type": "console",
+      "level": "warning",
+      "text": "THREE.THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.",
+      "location": {
+        "url": "http://127.0.0.1:3060/_next/static/chunks/42ca0d57f12858bc.js",
+        "lineNumber": 61,
+        "columnNumber": 14902
+      }
+    },
+    {
+      "type": "console",
+      "level": "warning",
+      "text": "[.WebGL-0x1b6400140800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "location": {
+        "url": "http://127.0.0.1:3060/office",
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "console",
+      "level": "warning",
+      "text": "[.WebGL-0x1b640013f000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "location": {
+        "url": "http://127.0.0.1:3060/office",
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "console",
+      "level": "warning",
+      "text": "[.WebGL-0x1b640013f000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "location": {
+        "url": "http://127.0.0.1:3060/office",
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "console",
+      "level": "debug",
+      "text": "unsupported GPOS table LookupType 8 format 2",
+      "location": {
+        "url": "blob:http://127.0.0.1:3060/c466300c-288b-494d-8844-4f6a303ca505",
+        "lineNumber": 4,
+        "columnNumber": 17110
+      }
+    },
+    {
+      "type": "console",
+      "level": "debug",
+      "text": "unsupported GPOS table LookupType 5 format 1",
+      "location": {
+        "url": "blob:http://127.0.0.1:3060/c466300c-288b-494d-8844-4f6a303ca505",
+        "lineNumber": 4,
+        "columnNumber": 17110
+      }
+    },
+    {
+      "type": "console",
+      "level": "debug",
+      "text": "unsupported GSUB table LookupType 6 format 2",
+      "location": {
+        "url": "blob:http://127.0.0.1:3060/c466300c-288b-494d-8844-4f6a303ca505",
+        "lineNumber": 4,
+        "columnNumber": 19527
+      }
+    },
+    {
+      "type": "console",
+      "level": "debug",
+      "text": "unsupported GSUB table LookupType 6 format 1",
+      "location": {
+        "url": "blob:http://127.0.0.1:3060/c466300c-288b-494d-8844-4f6a303ca505",
+        "lineNumber": 4,
+        "columnNumber": 19527
+      }
+    },
+    {
+      "type": "console",
+      "level": "warning",
+      "text": "THREE.THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.",
+      "location": {
+        "url": "http://127.0.0.1:3060/_next/static/chunks/42ca0d57f12858bc.js",
+        "lineNumber": 61,
+        "columnNumber": 14902
+      }
+    },
+    {
+      "type": "console",
+      "level": "debug",
+      "text": "unsupported GPOS table LookupType 8 format 2",
+      "location": {
+        "url": "blob:http://127.0.0.1:3060/c466300c-288b-494d-8844-4f6a303ca505",
+        "lineNumber": 4,
+        "columnNumber": 17110
+      }
+    },
+    {
+      "type": "console",
+      "level": "debug",
+      "text": "unsupported GPOS table LookupType 5 format 1",
+      "location": {
+        "url": "blob:http://127.0.0.1:3060/c466300c-288b-494d-8844-4f6a303ca505",
+        "lineNumber": 4,
+        "columnNumber": 17110
+      }
+    },
+    {
+      "type": "console",
+      "level": "debug",
+      "text": "unsupported GSUB table LookupType 6 format 2",
+      "location": {
+        "url": "blob:http://127.0.0.1:3060/c466300c-288b-494d-8844-4f6a303ca505",
+        "lineNumber": 4,
+        "columnNumber": 19527
+      }
+    },
+    {
+      "type": "console",
+      "level": "debug",
+      "text": "unsupported GSUB table LookupType 6 format 1",
+      "location": {
+        "url": "blob:http://127.0.0.1:3060/c466300c-288b-494d-8844-4f6a303ca505",
+        "lineNumber": 4,
+        "columnNumber": 19527
+      }
+    },
+    {
+      "type": "console",
+      "level": "warning",
+      "text": "[.WebGL-0x1b6405912000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+      "location": {
+        "url": "http://127.0.0.1:3060/office",
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "console",
+      "level": "log",
+      "text": "THREE.WebGLRenderer: Context Lost.",
+      "location": {
+        "url": "http://127.0.0.1:3060/_next/static/chunks/42ca0d57f12858bc.js",
+        "lineNumber": 61,
+        "columnNumber": 14513
+      }
+    },
+    {
+      "type": "console",
+      "level": "warning",
+      "text": "THREE.THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.",
+      "location": {
+        "url": "http://127.0.0.1:3060/_next/static/chunks/42ca0d57f12858bc.js",
+        "lineNumber": 61,
+        "columnNumber": 14902
+      }
+    },
+    {
+      "type": "console",
+      "level": "log",
+      "text": "THREE.WebGLRenderer: Context Lost.",
+      "location": {
+        "url": "http://127.0.0.1:3060/_next/static/chunks/42ca0d57f12858bc.js",
+        "lineNumber": 61,
+        "columnNumber": 14513
+      }
+    }
+  ]
+}
