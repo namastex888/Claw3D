@@ -13,10 +13,12 @@ const securityHeaders = [
       "font-src 'self' data: https:",
       "style-src 'self' 'unsafe-inline' https:",
       // 'unsafe-eval' is required by Next.js dev mode (source maps, HMR).
-      // In production it is dropped — React and Three.js do not need eval.
+      // Production still needs 'wasm-unsafe-eval' because the Three text stack
+      // preloads WASM font shaping; this keeps JS eval blocked while allowing
+      // WebAssembly compilation.
       ...(process.env.NODE_ENV !== "production"
         ? ["script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:"]
-        : ["script-src 'self' 'unsafe-inline' blob:"]),
+        : ["script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:"]),
       // connect-src is intentionally broad: gateway URLs are user-configured
       // at runtime and cannot be enumerated at build time.
       // Restrict further when a fixed deployment target is known.
