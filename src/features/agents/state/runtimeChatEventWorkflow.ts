@@ -263,8 +263,8 @@ export const planRuntimeChatEvent = (
         sessionKey: payload.sessionKey,
       });
       commands.push({
-        kind: "logWarn",
-        message: "No thinking trace extracted from chat event.",
+        kind: "logMetric",
+        metric: "chat_final_without_thinking_trace",
         meta: {
           sessionKey: payload.sessionKey,
           message: summarizeThinkingMessage(payload.message ?? payload),

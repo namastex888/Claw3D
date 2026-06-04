@@ -61,6 +61,32 @@ const OPENCLAW_CONFIG_FILENAME = "openclaw.json";
 
 const isRecord = (value) => Boolean(value && typeof value === "object");
 
+const candidateUrlMatches = (candidate, reference) => {
+  try {
+    const left = new URL(String(candidate ?? "").trim());
+    const right = new URL(String(reference ?? "").trim());
+    return left.protocol === right.protocol && left.host === right.host;
+  } catch {
+    return false;
+  }
+};
+
+const isSelfPublishedGatewayUrl = (url, env = process.env) => {
+  const trimmed = String(url ?? "").trim();
+  if (!trimmed) return false;
+  const publicUrls = [
+    env.CLAW3D_PUBLIC_GATEWAY_URL,
+    env.CLAW3D_PUBLIC_ORIGIN,
+    // Current khal-1 evaluation bridge. This prevents the browser-facing
+    // Studio proxy from using itself as the upstream runtime and timing out.
+    "wss://khal-1.nebulosa-cirius.ts.net:3040",
+    "https://khal-1.nebulosa-cirius.ts.net:3040",
+    "wss://khal-1.nebulosa-cirius.ts.net:18789",
+    "https://khal-1.nebulosa-cirius.ts.net:18789",
+  ].filter(Boolean);
+  return publicUrls.some((reference) => candidateUrlMatches(trimmed, reference));
+};
+
 const readOpenclawGatewayDefaults = (env = process.env) => {
   try {
     const stateDir = resolveStateDir(env);
@@ -86,7 +112,8 @@ const loadUpstreamGatewaySettings = (env = process.env) => {
   const settingsPath = resolveStudioSettingsPath(env);
   const parsed = readJsonFile(settingsPath);
   const gateway = parsed && typeof parsed === "object" ? parsed.gateway : null;
-  const url = typeof gateway?.url === "string" ? gateway.url.trim() : "";
+  const rawUrl = typeof gateway?.url === "string" ? gateway.url.trim() : "";
+  const url = isSelfPublishedGatewayUrl(rawUrl, env) ? DEFAULT_GATEWAY_URL : rawUrl;
   const token = typeof gateway?.token === "string" ? gateway.token.trim() : "";
   const adapterType =
     typeof gateway?.adapterType === "string" && gateway.adapterType.trim()

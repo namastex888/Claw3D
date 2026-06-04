@@ -704,6 +704,20 @@ const recordWorkingActivity = (
   [agentId]: Math.max(current[agentId] ?? 0, nowMs + WORKING_LATCH_MS),
 });
 
+const recordWorkingActivityIfInactive = (
+  current: NumberByAgentId,
+  agentId: string,
+  nowMs: number,
+): NumberByAgentId => {
+  if ((current[agentId] ?? 0) > nowMs) return current;
+  return recordWorkingActivity(current, agentId, nowMs);
+};
+
+const areOfficeAnimationTriggerStatesEqual = (
+  left: OfficeAnimationTriggerState,
+  right: OfficeAnimationTriggerState,
+): boolean => JSON.stringify(left) === JSON.stringify(right);
+
 const recordStreamingActivity = (
   current: NumberByAgentId,
   agentId: string,
@@ -1117,7 +1131,7 @@ export const reconcileOfficeAnimationTriggerState = (params: {
     const agentId = agent.agentId;
     const isAgentRunning = agent.status === "running" || Boolean(agent.runId);
     if (isAgentRunning) {
-      workingUntilByAgentId = recordWorkingActivity(
+      workingUntilByAgentId = recordWorkingActivityIfInactive(
         workingUntilByAgentId,
         agentId,
         nowMs,
@@ -1244,7 +1258,7 @@ export const reconcileOfficeAnimationTriggerState = (params: {
     });
   }
 
-  return {
+  const reconciled = {
     ...next,
     cleaningCues: cleaningCues.slice(0, CLEANING_CUE_LIMIT),
     deskDirectiveKeyByAgentId,
@@ -1265,6 +1279,10 @@ export const reconcileOfficeAnimationTriggerState = (params: {
     textMessageDirectiveKeyByAgentId,
     workingUntilByAgentId,
   };
+
+  return areOfficeAnimationTriggerStatesEqual(reconciled, params.state)
+    ? params.state
+    : reconciled;
 };
 
 export const clearOfficeAnimationTriggerHold = (params: {
