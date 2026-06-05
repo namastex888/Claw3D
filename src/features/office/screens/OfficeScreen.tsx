@@ -140,6 +140,7 @@ import {
   HQSidebar,
   type HQSidebarTab,
 } from "@/features/office/components/HQSidebar";
+import { HermesTowerPanel } from "@/features/office/components/HermesTowerPanel";
 import { CompanyBuilderModal } from "@/features/company-builder/components/CompanyBuilderModal";
 import {
   buildGenerateCompanyPlanPrompt,
@@ -4797,6 +4798,7 @@ export function OfficeScreen({
         }}
         activeAdapterType={(selectedAdapterType as FloorProvider) ?? null}
       />
+      <HermesTowerPanel />
       <section className="relative h-full min-h-0 min-w-0 overflow-hidden">
         <RetroOffice3D
           key={activeFloor.id}
