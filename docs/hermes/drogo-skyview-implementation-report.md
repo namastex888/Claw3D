@@ -204,8 +204,8 @@ Remaining caveat: console has pre-existing Three.js/WebGL warnings/noise, so the
 
 ## Recommended next step
 
-Do a narrow cleanup/review gate before Telegraph:
+Do a narrow cleanup/review gate before the next Claw3D control-surface slice:
 
-1. Commit or stash/split the pre-existing dirty reliability work from this Drogo slice.
+1. Keep the committed Claw3D branch as the active product context.
 2. Optionally fix or explicitly waive the Three.js/WebGL console noise.
-3. Then proceed to Telegraph Phase 8A/8B using Drogo/Skyview as the proven control foundation.
+3. Continue from Drogo/Skyview: improve operator control, room switching, agent inspector fidelity, and the future Desktop WebSocket provider boundary.
