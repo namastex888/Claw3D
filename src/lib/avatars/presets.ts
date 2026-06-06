@@ -1,11 +1,11 @@
 import type { AgentAvatarProfile } from "@/lib/avatars/profile";
 
-export const DROGO_SERVER_GOD_AGENT_ID = "drogo";
-export const DROGO_SERVER_GOD_AVATAR_SEED = "drogo-server-god";
+export const TOWER_PRESIDENT_AGENT_ID = "tower-president";
+export const TOWER_PRESIDENT_AVATAR_SEED = "tower-president";
 
-export const DROGO_SERVER_GOD_AVATAR_PROFILE: AgentAvatarProfile = {
+export const TOWER_PRESIDENT_AVATAR_PROFILE: AgentAvatarProfile = {
   version: 1,
-  seed: DROGO_SERVER_GOD_AVATAR_SEED,
+  seed: TOWER_PRESIDENT_AVATAR_SEED,
   body: {
     skinTone: "#d8a06e",
   },

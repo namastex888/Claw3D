@@ -4,10 +4,10 @@ import {
   isHermesOrchestratorAgent,
   resolveRuntimeProjection,
 } from "@/lib/world/runtimeProjection";
-import { DROGO_SERVER_GOD_AVATAR_PROFILE } from "@/lib/avatars/presets";
+import { TOWER_PRESIDENT_AVATAR_PROFILE } from "@/lib/avatars/presets";
 
 describe("runtime projection", () => {
-  it("projects the Hermes orchestrator as Drogo server-god without changing runtime id", () => {
+  it("projects the Hermes orchestrator as the Tower President without changing runtime id", () => {
     const projection = resolveRuntimeProjection(
       {
         agentId: "hermes",
@@ -19,19 +19,19 @@ describe("runtime projection", () => {
     );
 
     expect(projection.id).toBe("hermes");
-    expect(projection.name).toBe("Drogo");
-    expect(projection.subtitle).toBe("Server God / Orchestrator");
-    expect(projection.avatarProfile).toBe(DROGO_SERVER_GOD_AVATAR_PROFILE);
+    expect(projection.name).toBe("Tower President");
+    expect(projection.subtitle).toBe("Tower President / Executive Operator");
+    expect(projection.avatarProfile).toBe(TOWER_PRESIDENT_AVATAR_PROFILE);
     expect(projection.projection).toMatchObject({
-      kind: "server-god",
+      kind: "tower-president",
       runtimeAgentId: "hermes",
       runtimeName: "Hermes",
-      displayName: "Drogo",
-      roleLabel: "Server God / Orchestrator",
+      displayName: "Tower President",
+      roleLabel: "Tower President / Executive Operator",
       sourceLabel: "Hermes runtime",
       truth: "OBSERVED",
       omnipresent: true,
-      controlSurface: "skyview",
+      controlSurface: "executive",
     });
   });
 

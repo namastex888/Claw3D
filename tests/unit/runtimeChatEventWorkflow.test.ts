@@ -275,9 +275,9 @@ describe("runtime chat event workflow", () => {
       sessionKey: "agent:agent-1:studio:test-session",
     });
 
-    const warn = findCommand(result.commands, "logWarn");
+    const warn = findCommand(result.commands, "logMetric");
     expect(warn).toBeDefined();
-    expect(warn?.message).toBe("No thinking trace extracted from chat event.");
+    expect(warn?.metric).toBe("chat_final_without_thinking_trace");
 
     const policy = findCommand(result.commands, "applyPolicyIntents");
     expect(policy).toBeDefined();

@@ -5926,10 +5926,10 @@ export function RetroOffice3D({
         <div className="absolute top-3 left-3 z-20 flex flex-col items-start gap-2">
           <div className="rounded-xl border border-violet-300/20 bg-[#090812]/90 px-3 py-2 text-left shadow-lg backdrop-blur-sm">
             <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-violet-200/80">
-              Skyview Control
+              Executive Control
             </div>
             <div className="mt-1 text-[11px] font-semibold text-white/90">
-              Drogo server-god projection
+              Tower President · Khaw Tower
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -6291,7 +6291,7 @@ export function RetroOffice3D({
             >
               Monitor
             </button>
-            {!isRemoteOfficeAgentId(selectedControlAgent.id) && selectedControlAgent.projection?.kind !== "server-god" ? (
+            {!isRemoteOfficeAgentId(selectedControlAgent.id) && selectedControlAgent.projection?.kind !== "tower-president" ? (
               <button
                 type="button"
                 onClick={() => onAgentEdit?.(selectedControlAgent.id)}

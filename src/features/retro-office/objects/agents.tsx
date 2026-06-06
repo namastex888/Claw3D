@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { memo, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { createDefaultAgentAvatarProfile } from "@/lib/avatars/profile";
+import { TOWER_PRESIDENT_AVATAR_SEED } from "@/lib/avatars/presets";
 import {
   AGENT_SCALE,
   WALK_ANIM_SPEED,
@@ -66,7 +67,7 @@ export const AgentModel = memo(function AgentModel({
     () => appearance ?? createDefaultAgentAvatarProfile(agentId),
     [agentId, appearance],
   );
-  const isServerGodAvatar = resolvedAppearance.seed === "drogo-server-god";
+  const isTowerPresidentAvatar = resolvedAppearance.seed === TOWER_PRESIDENT_AVATAR_SEED;
 
   useFrame(() => {
     const agent =
@@ -667,7 +668,7 @@ export const AgentModel = memo(function AgentModel({
         <circleGeometry args={[0.12, 12]} />
         <meshBasicMaterial color="#000" transparent opacity={0.2} />
       </mesh>
-      {isServerGodAvatar ? (
+      {isTowerPresidentAvatar ? (
         <>
           <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
             <ringGeometry args={[0.22, 0.255, 40]} />
@@ -1005,7 +1006,7 @@ export const AgentModel = memo(function AgentModel({
           </mesh>
         </>
       ) : null}
-      {isServerGodAvatar ? (
+      {isTowerPresidentAvatar ? (
         <Billboard position={[0, 0.78, 0]}>
           <mesh position={[0, 0, -0.001]}>
             <ringGeometry args={[0.075, 0.092, 32]} />

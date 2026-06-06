@@ -1,12 +1,12 @@
 import type { AgentAvatarProfile } from "@/lib/avatars/profile";
 import {
-  DROGO_SERVER_GOD_AGENT_ID,
-  DROGO_SERVER_GOD_AVATAR_PROFILE,
+  TOWER_PRESIDENT_AGENT_ID,
+  TOWER_PRESIDENT_AVATAR_PROFILE,
 } from "@/lib/avatars/presets";
 
 export type RuntimeProjectionTruth = "OBSERVED" | "SIMULATED" | "VERIFIED" | "GAP";
 
-export type RuntimeProjectionKind = "server-god" | "runtime-agent";
+export type RuntimeProjectionKind = "tower-president" | "runtime-agent";
 
 export type RuntimeProjectionMetadata = {
   kind: RuntimeProjectionKind;
@@ -17,7 +17,7 @@ export type RuntimeProjectionMetadata = {
   sourceLabel: string;
   truth: RuntimeProjectionTruth;
   omnipresent: boolean;
-  controlSurface: "skyview" | "room";
+  controlSurface: "executive" | "room";
   safeActions: Array<"inspect" | "chat" | "monitor" | "copy-id">;
 };
 
@@ -71,21 +71,21 @@ export const resolveRuntimeProjection = (
     const runtimeName = agent.name?.trim() || agent.runtimeName?.trim() || "Hermes";
     return {
       id: agent.agentId,
-      name: "Drogo",
-      subtitle: "Server God / Orchestrator",
+      name: "Tower President",
+      subtitle: "Tower President / Executive Operator",
       color: "#111827",
-      item: "server-god",
-      avatarProfile: DROGO_SERVER_GOD_AVATAR_PROFILE,
+      item: "tower-president",
+      avatarProfile: TOWER_PRESIDENT_AVATAR_PROFILE,
       projection: {
-        kind: "server-god",
+        kind: "tower-president",
         runtimeAgentId: agent.agentId,
         runtimeName,
-        displayName: "Drogo",
-        roleLabel: "Server God / Orchestrator",
+        displayName: "Tower President",
+        roleLabel: "Tower President / Executive Operator",
         sourceLabel: "Hermes runtime",
         truth: "OBSERVED",
         omnipresent: true,
-        controlSurface: "skyview",
+        controlSurface: "executive",
         safeActions: ["inspect", "chat", "monitor", "copy-id"],
       },
     };
@@ -115,7 +115,7 @@ export const resolveRuntimeProjection = (
   };
 };
 
-export const isDrogoServerGodProjection = (projection: RuntimeProjectionMetadata | null | undefined) =>
-  projection?.kind === "server-god" || projection?.displayName === "Drogo";
+export const isTowerPresidentProjection = (projection: RuntimeProjectionMetadata | null | undefined) =>
+  projection?.kind === "tower-president" || projection?.displayName === "Tower President";
 
-export { DROGO_SERVER_GOD_AGENT_ID };
+export { TOWER_PRESIDENT_AGENT_ID };

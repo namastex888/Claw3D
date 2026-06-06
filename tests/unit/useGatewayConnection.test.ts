@@ -149,8 +149,14 @@ describe("useGatewayConnection", () => {
     });
   });
 
-  it("connects_via_studio_proxy_ws_and_does_not_pass_token", async () => {
+  it("connects_hermes_via_same_origin_snapshot_without_websocket_token", async () => {
     const { useGatewayConnection, captured } = await setupAndImportHook(null);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ truth: "OBSERVED" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     const coordinator = {
       loadSettings: async () => null,
       loadSettingsEnvelope: async () => ({
@@ -189,11 +195,15 @@ describe("useGatewayConnection", () => {
     render(createElement(Probe));
 
     await waitFor(() => {
-      expect(captured.url).toBe("ws://localhost:3000/api/gateway/ws");
-    });
-    expect(captured.token).toBe("");
-    expect(captured.authScopeKey).toBe("wss://remote.example");
-    expect(captured.clientName).toBe("openclaw-control-ui");
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/hermes/snapshot",
+        expect.objectContaining({ cache: "no-store" })
+      );
+    }, { timeout: 2_000 });
+    expect(captured.url).toBeNull();
+    expect(captured.token).toBeNull();
+    expect(captured.authScopeKey).toBeNull();
+    expect(captured.clientName).toBeNull();
   });
 
   it("uses_webchat_identity_for_remote_openclaw_connections", async () => {
@@ -282,14 +292,20 @@ describe("useGatewayConnection", () => {
     render(createElement(Probe));
 
     await waitFor(() => {
-      expect(captured.url).toBe("ws://localhost:3000/api/gateway/ws");
+      expect(captured.url).toBe("ws://localhost:18789");
     });
     expect(captured.authScopeKey).toBe("ws://localhost:18789");
     expect(captured.clientName).toBe("openclaw-control-ui");
   });
 
-  it("does_not_auto_connect_without_a_last_known_good_state", async () => {
+  it("auto_connects_hermes_native_when_a_persisted_snapshot_profile_exists", async () => {
     const { useGatewayConnection, captured } = await setupAndImportHook(null);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ truth: "OBSERVED" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     const coordinator = {
       loadSettingsEnvelope: async () => ({
         settings: {
@@ -334,7 +350,13 @@ describe("useGatewayConnection", () => {
     await waitFor(() => {
       expect(screen.getByTestId("gatewayUrl")).toHaveTextContent("ws://localhost:18789");
     });
-    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("yes");
+    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("no");
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/hermes/snapshot",
+        expect.objectContaining({ cache: "no-store" })
+      );
+    }, { timeout: 2_000 });
     expect(captured.url).toBeNull();
   });
 
@@ -555,6 +577,12 @@ describe("useGatewayConnection", () => {
 
   it("prefers_the_saved_selected_adapter_over_a_different_last_known_good_backend", async () => {
     const { useGatewayConnection, captured } = await setupAndImportHook(null);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ truth: "OBSERVED" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     const coordinator = {
       loadSettingsEnvelope: async () => ({
         settings: {
@@ -606,7 +634,13 @@ describe("useGatewayConnection", () => {
       expect(screen.getByTestId("gatewayUrl")).toHaveTextContent("ws://localhost:18789");
     });
     expect(screen.getByTestId("selectedAdapterType")).toHaveTextContent("hermes");
-    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("yes");
+    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("no");
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/hermes/snapshot",
+        expect.objectContaining({ cache: "no-store" })
+      );
+    }, { timeout: 2_000 });
     expect(captured.url).toBeNull();
   });
 
@@ -719,6 +753,12 @@ describe("useGatewayConnection", () => {
 
   it("persists_the_detected_backend_identity_in_last_known_good", async () => {
     const { useGatewayConnection } = await setupAndImportHook(null);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ truth: "OBSERVED" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     const patches: unknown[] = [];
     const coordinator = {
       loadSettingsEnvelope: async () => ({
@@ -796,7 +836,7 @@ describe("useGatewayConnection", () => {
         lastKnownGood: {
           url: "wss://remote.example",
           token: undefined,
-          adapterType: "openclaw",
+          adapterType: "hermes",
         },
       },
     });

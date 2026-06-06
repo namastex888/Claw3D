@@ -48,7 +48,7 @@ describe("useRuntimeConnection", () => {
     render(createElement(Probe));
 
     expect(screen.getByTestId("providerId")).toHaveTextContent("hermes");
-    expect(screen.getByTestId("providerLabel")).toHaveTextContent("Hermes");
+    expect(screen.getByTestId("providerLabel")).toHaveTextContent("Khaw Tower Native");
   });
 
   it("selects the custom provider from the active adapter type", async () => {

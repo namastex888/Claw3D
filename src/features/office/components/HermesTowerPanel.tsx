@@ -126,7 +126,7 @@ export function HermesTowerPanel() {
           </span>
         </div>
         <div className="mt-2 text-[11px] text-white/55">
-          source: {tower?.source ?? "http://localhost:9119"}
+          source: same-origin /api/hermes/snapshot
         </div>
         {tower ? (
           <div className="mt-1 text-[11px] text-white/55">
@@ -136,7 +136,7 @@ export function HermesTowerPanel() {
       </div>
 
       {state.status === "loading" ? (
-        <div className="px-4 py-4 text-xs text-white/60">Reading Hermes 9119 snapshot…</div>
+        <div className="px-4 py-4 text-xs text-white/60">Reading Khaw Tower snapshot…</div>
       ) : null}
 
       {state.status === "error" ? (
