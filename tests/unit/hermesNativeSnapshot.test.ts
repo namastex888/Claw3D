@@ -111,6 +111,32 @@ describe("Khaw Tower snapshot projection", () => {
       profiles: [{ id: "default", name: "default", model: "gpt-5.5", provider: "openai-codex", truth: "OBSERVED" }],
       sessions: [
         {
+          id: "sess_acp_generic_older",
+          source: "acp",
+          title: "acp 00c94d7f",
+          model: "codex",
+          profileName: null,
+          messageCount: 3,
+          toolCallCount: 1,
+          cwd: "/home/genie/workspace/agents/university/experiments/Claw3D",
+          startedAt: 900,
+          lastActiveAt: 900,
+          truth: "OBSERVED",
+        },
+        {
+          id: "sess_acp_generic_newer",
+          source: "acp",
+          title: "acp 00c94d7f",
+          model: "codex",
+          profileName: null,
+          messageCount: 4,
+          toolCallCount: 2,
+          cwd: "/home/genie/workspace/agents/university/experiments/Claw3D",
+          startedAt: 2000,
+          lastActiveAt: 2100,
+          truth: "OBSERVED",
+        },
+        {
           id: "sess_labs",
           source: "telegram",
           title: "Khaw Tower Office Labs Native Projection",
@@ -197,20 +223,31 @@ describe("Khaw Tower snapshot projection", () => {
     const labsFloor = tower.floors.find((floor) => floor.rooms.some((room) => room.id === "sess_labs"));
     expect(labsFloor).toMatchObject({
       laneId: "labs-university",
-      placement: { source: "repo-rule", truth: "OBSERVED" },
+      placement: { source: "repo-rule", truth: "GAP" },
     });
 
     const officeFloor = tower.floors.find((floor) => floor.rooms.some((room) => room.id === "sess_office"));
     expect(officeFloor).toMatchObject({
       laneId: "office",
-      placement: { source: "repo-rule", truth: "OBSERVED" },
+      placement: { source: "repo-rule", truth: "GAP" },
     });
 
     const openDesignFloor = tower.floors.find((floor) => floor.rooms.some((room) => room.id === "sess_open_design"));
     expect(openDesignFloor).toMatchObject({
       laneId: "labs-university",
-      placement: { source: "repo-rule", truth: "OBSERVED" },
+      placement: { source: "repo-rule", truth: "GAP" },
     });
+
+    const claw3dFloor = tower.floors.find((floor) => floor.label === "Claw3D");
+    expect(claw3dFloor).toMatchObject({
+      laneId: "labs-university",
+      placement: { source: "repo-rule", truth: "GAP" },
+    });
+    expect(claw3dFloor?.rooms.map((room) => room.id)).toEqual([
+      "sess_acp_generic_newer",
+      "sess_acp_generic_older",
+    ]);
+    expect(tower.floors.find((floor) => floor.label.startsWith("Acp "))).toBeUndefined();
 
     const khawDesktopFloor = tower.floors.find((floor) => floor.rooms.some((room) => room.id === "sess_khaw_desktop"));
     expect(khawDesktopFloor).toMatchObject({

@@ -152,14 +152,32 @@ const searchableSessionText = (session: HermesSessionNode): string =>
     .join(" ")
     .toLowerCase();
 
+const GENERIC_SESSION_TITLE_RE = /^(acp|cli|session|thread)\s+[a-z0-9_-]{6,}$/i;
+const TRAILING_RESUME_COUNTER_RE = /\s+#\d+$/;
+
+const pathWorkstreamTitle = (cwd: string | null): string | null => {
+  if (!cwd) return null;
+  const parts = cwd.split("/").filter(Boolean);
+  const wishesIndex = parts.indexOf("wishes");
+  if (wishesIndex !== -1 && parts.length > wishesIndex + 4) {
+    const wishSlug = parts.at(-1);
+    return wishSlug ? titleCase(wishSlug) : null;
+  }
+  const leaf = parts.at(-1);
+  if (!leaf) return null;
+  if (["src", "workspace", "agents", "experiments"].includes(leaf.toLowerCase())) return null;
+  return titleCase(leaf);
+};
+
+const normalizeWorkstreamTitle = (value: string): string =>
+  titleCase(value.trim().replace(TRAILING_RESUME_COUNTER_RE, ""));
+
 const extractWishTitle = (session: HermesSessionNode): string | null => {
   const title = session.title.trim();
-  if (title) return title;
-  if (session.cwd) {
-    const leaf = session.cwd.split("/").filter(Boolean).at(-1);
-    if (leaf) return titleCase(leaf);
-  }
-  return null;
+  const pathTitle = pathWorkstreamTitle(session.cwd);
+  if (title && GENERIC_SESSION_TITLE_RE.test(title) && pathTitle) return pathTitle;
+  if (title) return normalizeWorkstreamTitle(title);
+  return pathTitle;
 };
 
 const classifyWishPlacement = (session: HermesSessionNode): KhawTowerWishPlacement => {
@@ -178,7 +196,7 @@ const classifyWishPlacement = (session: HermesSessionNode): KhawTowerWishPlaceme
       laneId: "labs-university",
       laneLabel: laneLabel("labs-university"),
       source: "repo-rule",
-      truth: "OBSERVED",
+      truth: "GAP",
     };
   }
 
@@ -187,7 +205,7 @@ const classifyWishPlacement = (session: HermesSessionNode): KhawTowerWishPlaceme
       laneId: "labs-university",
       laneLabel: laneLabel("labs-university"),
       source: "path-rule",
-      truth: "OBSERVED",
+      truth: "GAP",
     };
   }
 
@@ -215,7 +233,7 @@ const classifyWishPlacement = (session: HermesSessionNode): KhawTowerWishPlaceme
       laneId: "office",
       laneLabel: laneLabel("office"),
       source: "repo-rule",
-      truth: "OBSERVED",
+      truth: "GAP",
     };
   }
 
@@ -280,12 +298,15 @@ const buildPresident = (snapshot: HermesSnapshot): KhawTowerPresident => ({
   presence: "tower-level",
 });
 
+const floorLastActiveAt = (floor: HermesTowerFloor): number =>
+  Math.max(0, ...floor.rooms.map((room) => room.lastActiveAt ?? 0));
+
 const buildLanes = (floors: HermesTowerFloor[]): KhawTowerLane[] =>
   LANE_DEFINITIONS.map((lane) => {
     const laneFloors = floors.filter((floor) => floor.laneId === lane.id);
     return {
       ...lane,
-      truth: lane.id === "unknown" && laneFloors.length > 0 ? "GAP" : "OBSERVED",
+      truth: laneFloors.some((floor) => floor.truth === "GAP") ? "GAP" : "OBSERVED",
       floorCount: laneFloors.length,
       roomCount: laneFloors.reduce((total, floor) => total + floor.rooms.length, 0),
     };
@@ -318,11 +339,17 @@ export function projectHermesSnapshotToTower(snapshot: HermesSnapshot): HermesTo
     }
   }
 
-  const floors = Array.from(floorsById.values()).sort((left, right) => {
+  const floors = Array.from(floorsById.values()).map((floor) => ({
+    ...floor,
+    rooms: [...floor.rooms].sort(
+      (left, right) =>
+        (right.lastActiveAt ?? 0) - (left.lastActiveAt ?? 0) || left.label.localeCompare(right.label),
+    ),
+  })).sort((left, right) => {
     const laneDelta =
       LANE_DEFINITIONS.findIndex((lane) => lane.id === left.laneId) -
       LANE_DEFINITIONS.findIndex((lane) => lane.id === right.laneId);
-    return laneDelta || right.rooms.length - left.rooms.length || left.label.localeCompare(right.label);
+    return laneDelta || floorLastActiveAt(right) - floorLastActiveAt(left) || right.rooms.length - left.rooms.length || left.label.localeCompare(right.label);
   });
 
   return {
