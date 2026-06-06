@@ -15,6 +15,7 @@ import type {
   StudioSettingsPublic,
 } from "@/lib/studio/settings";
 import {
+  HERMES_NATIVE_SNAPSHOT_PROFILE_URL,
   resolveDefaultStudioGatewayProfile,
   resolveStudioGatewayProfiles,
 } from "@/lib/studio/settings";
@@ -118,7 +119,7 @@ const parseConnectFailedCloseReason = (
 };
 
 const DEFAULT_UPSTREAM_GATEWAY_URL =
-  process.env.NEXT_PUBLIC_GATEWAY_URL || "ws://localhost:18789";
+  process.env.NEXT_PUBLIC_GATEWAY_URL || HERMES_NATIVE_SNAPSHOT_PROFILE_URL;
 const INITIAL_AUTO_CONNECT_DELAY_MS = 900;
 const INITIAL_CONNECT_RETRY_DELAY_MS = 1_200;
 const OPENCLAW_CONTROL_UI_CLIENT_ID = "openclaw-control-ui";
@@ -725,7 +726,7 @@ export const useGatewayConnection = (
   const [gatewayUrl, setGatewayUrl] = useState(DEFAULT_UPSTREAM_GATEWAY_URL);
   const [token, setToken] = useState("");
   const [selectedAdapterType, setSelectedAdapterTypeState] =
-    useState<StudioGatewayAdapterType>("openclaw");
+    useState<StudioGatewayAdapterType>("hermes");
   const [adapterProfiles, setAdapterProfiles] = useState<
     Partial<Record<StudioGatewayAdapterType, { url: string; token: string }>>
   >({});
@@ -827,9 +828,9 @@ export const useGatewayConnection = (
             loadedGatewaySettings.current = {
               gatewayUrl: DEFAULT_UPSTREAM_GATEWAY_URL.trim(),
               token: "",
-              adapterType: "openclaw",
+              adapterType: "hermes",
               profiles: undefined,
-              hasLastKnownGood: false,
+              hasLastKnownGood: true,
             };
           }
           setSettingsLoaded(true);
@@ -1003,7 +1004,7 @@ export const useGatewayConnection = (
         hello?.adapterType === "openclaw" ||
         hello?.adapterType === "custom"
           ? hello.adapterType
-          : "openclaw";
+          : selectedAdapterType;
       setDetectedAdapterType(nextDetectedAdapterType);
       setHasLastKnownGoodState(nextDetectedAdapterType === selectedAdapterType);
       // Flush immediately (debounce=0) so lastKnownGood survives a quick refresh.

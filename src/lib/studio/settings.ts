@@ -281,6 +281,7 @@ export type StudioSettingsPatch = {
 };
 
 const SETTINGS_VERSION = 1 as const;
+export const HERMES_NATIVE_SNAPSHOT_PROFILE_URL = "hermes-native:/api/hermes/snapshot";
 const DEFAULT_OPENCLAW_GATEWAY_URL = "ws://localhost:18789";
 const DEFAULT_LOCAL_ADAPTER_GATEWAY_URL = "ws://localhost:18789";
 const DEFAULT_LOCAL_RUNTIME_URL = "http://localhost:7770";
@@ -850,7 +851,7 @@ const mergeGatewaySettings = (
     patch.token === undefined ? current?.token ?? "" : coerceString(patch.token);
   const nextAdapterType =
     patch.adapterType === undefined
-      ? current?.adapterType ?? "openclaw"
+      ? current?.adapterType ?? "hermes"
       : normalizeGatewayAdapterType(patch.adapterType);
   const nextProfiles = mergeGatewayProfiles(current?.profiles, patch.profiles);
   const nextLastKnownGood = mergeGatewayConnectionState(
@@ -921,7 +922,7 @@ const mergeGatewayConnectionState = (
   const nextToken = patchedToken || (current?.token ?? "");
   const nextAdapterType =
     patch.adapterType === undefined
-      ? current?.adapterType ?? "openclaw"
+      ? current?.adapterType ?? "hermes"
       : normalizeGatewayAdapterType(patch.adapterType);
   return {
     url: nextUrl,
@@ -932,7 +933,7 @@ const mergeGatewayConnectionState = (
 
 const normalizeGatewayAdapterType = (
   value: unknown,
-  fallback: StudioGatewayAdapterType = "openclaw"
+  fallback: StudioGatewayAdapterType = "hermes"
 ): StudioGatewayAdapterType => {
   const adapterType = coerceString(value).toLowerCase();
   if (
@@ -974,9 +975,10 @@ export const resolveDefaultStudioGatewayProfile = (
       return { url: DEFAULT_LOCAL_RUNTIME_URL, token: "" };
     case "custom":
       return { url: DEFAULT_CUSTOM_RUNTIME_URL, token: "" };
-    case "hermes":
     case "demo":
       return { url: DEFAULT_LOCAL_ADAPTER_GATEWAY_URL, token: "" };
+    case "hermes":
+      return { url: HERMES_NATIVE_SNAPSHOT_PROFILE_URL, token: "" };
     case "openclaw":
     default:
       return { url: DEFAULT_OPENCLAW_GATEWAY_URL, token: "" };
@@ -994,7 +996,7 @@ export const resolveStudioGatewayProfiles = ({
     gateway?.adapterType ??
     gateway?.lastKnownGood?.adapterType ??
     localDefaults?.adapterType ??
-    "openclaw";
+    "hermes";
 
   const profiles: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> = {
     ...(localDefaults?.profiles ?? {}),

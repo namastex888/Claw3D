@@ -64,12 +64,12 @@ describe("studio settings route", () => {
 
     expect(response.status).toBe(200);
     expect(body.settings?.gateway).toEqual({
-      url: "ws://localhost:18789",
+      url: "hermes-native:/api/hermes/snapshot",
       tokenConfigured: false,
       adapterType: "hermes",
       profiles: {
         hermes: {
-          url: "ws://localhost:18789",
+          url: "hermes-native:/api/hermes/snapshot",
           tokenConfigured: false,
         },
       },
@@ -77,7 +77,7 @@ describe("studio settings route", () => {
     expect(body.localGatewayDefaults).toEqual(body.settings?.gateway);
   });
 
-  it("GET rewrites stale loopback settings to the tailnet request host", async () => {
+  it("GET keeps Hermes native defaults same-origin even for tailnet browser contexts", async () => {
     tempDir = makeTempDir("studio-settings-get-tailnet-context-defaults");
     process.env.OPENCLAW_STATE_DIR = tempDir;
     fs.mkdirSync(path.join(tempDir, "claw3d"), { recursive: true });
@@ -118,12 +118,12 @@ describe("studio settings route", () => {
 
     expect(response.status).toBe(200);
     expect(body.settings?.gateway).toEqual({
-      url: "wss://khal-1.nebulosa-cirius.ts.net:18789",
+      url: "hermes-native:/api/hermes/snapshot",
       tokenConfigured: false,
       adapterType: "hermes",
       profiles: {
         hermes: {
-          url: "wss://khal-1.nebulosa-cirius.ts.net:18789",
+          url: "hermes-native:/api/hermes/snapshot",
           tokenConfigured: false,
         },
       },

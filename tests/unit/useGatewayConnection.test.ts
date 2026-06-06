@@ -127,7 +127,7 @@ describe("useGatewayConnection", () => {
     });
   });
 
-  it("falls_back_to_local_default_when_env_unset", async () => {
+  it("falls_back_to_hermes_native_snapshot_when_env_unset", async () => {
     const { useGatewayConnection } = await setupAndImportHook(null);
     const coordinator = {
       loadSettings: async () => null,
@@ -145,7 +145,7 @@ describe("useGatewayConnection", () => {
     render(createElement(Probe));
 
     await waitFor(() => {
-      expect(screen.getByTestId("gatewayUrl")).toHaveTextContent("ws://localhost:18789");
+      expect(screen.getByTestId("gatewayUrl")).toHaveTextContent("hermes-native:/api/hermes/snapshot");
     });
   });
 
@@ -642,6 +642,82 @@ describe("useGatewayConnection", () => {
       );
     }, { timeout: 2_000 });
     expect(captured.url).toBeNull();
+  });
+
+  it("defaults_to_hermes_native_snapshot_without_saved_gateway_or_openclaw_prompt", async () => {
+    const { useGatewayConnection, captured } = await setupAndImportHook(null);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ truth: "OBSERVED" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    const patches: unknown[] = [];
+    const coordinator = {
+      loadSettings: async () => null,
+      loadSettingsEnvelope: async () => ({
+        settings: {
+          version: 1,
+          gateway: null,
+          focused: {},
+          avatars: {},
+          analytics: {},
+          voiceReplies: {},
+          office: {},
+          deskAssignments: {},
+          standup: {},
+          taskBoard: {},
+        },
+        localGatewayDefaults: null,
+      }),
+      schedulePatch: (patch: unknown) => {
+        patches.push(patch);
+      },
+      flushPending: async () => {},
+    };
+
+    const Probe = () => {
+      const state = useGatewayConnection(coordinator);
+      return createElement(
+        "div",
+        null,
+        createElement("div", { "data-testid": "gatewayUrl" }, state.gatewayUrl),
+        createElement("div", { "data-testid": "selectedAdapterType" }, state.selectedAdapterType),
+        createElement("div", { "data-testid": "activeAdapterType" }, state.activeAdapterType),
+        createElement(
+          "div",
+          { "data-testid": "shouldPromptForConnect" },
+          state.shouldPromptForConnect ? "yes" : "no"
+        )
+      );
+    };
+
+    render(createElement(Probe));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("gatewayUrl")).toHaveTextContent(
+        "hermes-native:/api/hermes/snapshot"
+      );
+    });
+    expect(screen.getByTestId("selectedAdapterType")).toHaveTextContent("hermes");
+    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("no");
+    await waitFor(() => {
+      expect(screen.getByTestId("activeAdapterType")).toHaveTextContent("hermes");
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/hermes/snapshot",
+        expect.objectContaining({ cache: "no-store" })
+      );
+    }, { timeout: 2_000 });
+    expect(captured.url).toBeNull();
+    expect(patches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          gateway: expect.objectContaining({
+            adapterType: "hermes",
+          }),
+        }),
+      ])
+    );
   });
 
   it("loads_custom_adapter_type_without_requiring_a_token", async () => {

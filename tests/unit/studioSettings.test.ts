@@ -437,6 +437,10 @@ describe("studio settings normalization", () => {
       url: "ws://localhost:18789",
       token: "",
     });
+    expect(resolveDefaultStudioGatewayProfile("hermes", null)).toEqual({
+      url: "hermes-native:/api/hermes/snapshot",
+      token: "",
+    });
   });
 
   it("merging lastKnownGood with an empty-string token does not overwrite a stored token", () => {

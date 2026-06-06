@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { resolveStateDir } from "@/lib/clawdbot/paths";
 import {
+  HERMES_NATIVE_SNAPSHOT_PROFILE_URL,
   defaultStudioSettings,
   mergeStudioSettings,
   normalizeStudioSettings,
@@ -136,9 +137,12 @@ export const buildContextGatewayDefaults = (request?: Request | null): StudioGat
   if (!context?.hostname) return null;
   const gatewayHost = isLoopbackHostname(context.hostname) ? "localhost" : context.hostname;
   const scheme = context.secure && !isLoopbackHostname(context.hostname) ? "wss" : "ws";
-  const url = `${scheme}://${gatewayHost}:${CONTEXT_GATEWAY_PORT}`;
   const adapterType = normalizeAdapterType(process.env.CLAW3D_GATEWAY_ADAPTER_TYPE) ?? "hermes";
   const token = process.env.CLAW3D_GATEWAY_TOKEN?.trim() ?? "";
+  const url =
+    adapterType === "hermes"
+      ? HERMES_NATIVE_SNAPSHOT_PROFILE_URL
+      : `${scheme}://${gatewayHost}:${CONTEXT_GATEWAY_PORT}`;
   return buildGatewaySettings({
     adapterType,
     url,
