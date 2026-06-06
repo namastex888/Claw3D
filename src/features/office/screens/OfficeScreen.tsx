@@ -3171,7 +3171,7 @@ export function OfficeScreen({
     [state.agents],
   );
   const standupController = useOfficeStandupController({
-    gatewayUrl,
+    gatewayUrl: activeAdapterType === "hermes" ? "hermes-native:/api/hermes/snapshot" : gatewayUrl,
     agents: standupAgentSnapshots,
   });
   const taskBoard = useTaskBoardController({

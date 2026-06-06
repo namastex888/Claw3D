@@ -5,6 +5,7 @@ import type {
   GatewayGapInfo,
   GatewayStatus,
 } from "@/lib/gateway/GatewayClient";
+import type { HermesSessionNode, HermesSnapshot } from "@/lib/runtime/hermes-native/types";
 
 export type RuntimeAttachment = {
   name: string;
@@ -32,6 +33,7 @@ export type RuntimeCapability =
 export type RuntimeProviderId =
   | "openclaw"
   | "hermes"
+  | "hermes-native"
   | "demo"
   | "local"
   | "claw3d"
@@ -50,6 +52,15 @@ export type RuntimeSummaryEvent = {
   type: "summary-refresh";
   at: number;
   frame: EventFrame;
+  snapshot?: HermesSnapshot;
+};
+
+export type RuntimeSessionEvent = {
+  type: "session.started" | "session.updated" | "session.ended";
+  at: number;
+  frame: EventFrame;
+  session: HermesSessionNode;
+  previousSession?: HermesSessionNode;
 };
 
 export type RuntimeChatEvent =
@@ -87,6 +98,7 @@ export type RuntimeUnknownEvent = {
 
 export type RuntimeEvent =
   | RuntimeSummaryEvent
+  | RuntimeSessionEvent
   | RuntimeChatEvent
   | RuntimeLifecycleEvent
   | RuntimeUnknownEvent;
@@ -98,7 +110,7 @@ export interface RuntimeProvider {
   readonly label: string;
   readonly metadata: RuntimeProviderMetadata;
   readonly capabilities: ReadonlySet<RuntimeCapability>;
-  readonly client: GatewayClient;
+  readonly client?: GatewayClient | null;
   connect(options: GatewayConnectOptions): Promise<void>;
   disconnect(): void;
   call<T = unknown>(method: string, params: unknown): Promise<T>;

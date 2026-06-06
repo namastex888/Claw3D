@@ -95,8 +95,8 @@ describe("Hermes native snapshot", () => {
   });
 });
 
-describe("Hermes snapshot tower projection", () => {
-  it("groups sessions into human-readable wish floors and labels inferred wish truth as GAP", () => {
+describe("Khaw Tower snapshot projection", () => {
+  it("groups Wish floors under Office and Labs elevator banks with placement truth", () => {
     const tower = projectHermesSnapshotToTower({
       at: 123,
       truth: "OBSERVED",
@@ -104,23 +104,75 @@ describe("Hermes snapshot tower projection", () => {
         url: "http://localhost:9119",
         version: "0.15.1",
         gatewayRunning: true,
-        activeSessions: 1,
+        activeSessions: 3,
         platforms: { telegram: { state: "connected" } },
       },
       wishes: [],
       profiles: [{ id: "default", name: "default", model: "gpt-5.5", provider: "openai-codex", truth: "OBSERVED" }],
       sessions: [
         {
-          id: "sess_1",
+          id: "sess_labs",
           source: "telegram",
-          title: "Build Hermes native Claw3D",
+          title: "Khaw Tower Office Labs Native Projection",
           model: "gpt-5.5",
           profileName: "default",
           messageCount: 7,
           toolCallCount: 3,
-          cwd: "/workspace/Claw3D",
+          cwd: "/home/genie/workspace/agents/university/experiments/Claw3D",
           startedAt: 1000,
           lastActiveAt: 1100,
+          truth: "OBSERVED",
+        },
+        {
+          id: "sess_office",
+          source: "cli",
+          title: "Eugenia Release Readiness",
+          model: "codex",
+          profileName: "engineer",
+          messageCount: 9,
+          toolCallCount: 4,
+          cwd: "/home/genie/workspace/genie-hv-eugenia",
+          startedAt: 1200,
+          lastActiveAt: 1300,
+          truth: "OBSERVED",
+        },
+        {
+          id: "sess_unknown",
+          source: "slack",
+          title: "Unclassified support thread",
+          model: "unknown-model",
+          profileName: null,
+          messageCount: 1,
+          toolCallCount: 0,
+          cwd: null,
+          startedAt: 1400,
+          lastActiveAt: 1500,
+          truth: "OBSERVED",
+        },
+        {
+          id: "sess_open_design",
+          source: "acp",
+          title: "Open Design duplicate key review",
+          model: "codex",
+          profileName: null,
+          messageCount: 5,
+          toolCallCount: 2,
+          cwd: "/home/genie/workspace/src/open-design",
+          startedAt: 1600,
+          lastActiveAt: 1700,
+          truth: "OBSERVED",
+        },
+        {
+          id: "sess_khaw_desktop",
+          source: "telegram",
+          title: "KHAW Desktop Project Resume",
+          model: "gpt-5.5",
+          profileName: null,
+          messageCount: 8,
+          toolCallCount: 1,
+          cwd: null,
+          startedAt: 1800,
+          lastActiveAt: 1900,
           truth: "OBSERVED",
         },
       ],
@@ -130,24 +182,59 @@ describe("Hermes snapshot tower projection", () => {
       sources: [],
     });
 
-    expect(tower.title).toBe("Hermes Tower");
-    expect(tower.floors).toHaveLength(1);
-    expect(tower.floors[0]).toMatchObject({
-      id: "wish:build-hermes-native-claw3d",
-      label: "Build Hermes Native Claw3D",
-      truth: "GAP",
-      association: "inferred",
-    });
-    expect(tower.floors[0].rooms[0]).toMatchObject({
-      id: "sess_1",
-      label: "Build Hermes native Claw3D",
-      source: "telegram",
+    expect(tower.title).toBe("Khaw Tower");
+    expect(tower.president).toMatchObject({
+      label: "Tower President",
+      personaLabel: "Drogo",
       truth: "OBSERVED",
     });
-    expect(tower.floors[0].rooms[0].workers[0]).toMatchObject({
+    expect(tower.lanes.map((lane) => [lane.id, lane.label])).toEqual([
+      ["office", "Office"],
+      ["labs-university", "Labs / University"],
+      ["unknown", "Unknown / Ground"],
+    ]);
+
+    const labsFloor = tower.floors.find((floor) => floor.rooms.some((room) => room.id === "sess_labs"));
+    expect(labsFloor).toMatchObject({
+      laneId: "labs-university",
+      placement: { source: "repo-rule", truth: "OBSERVED" },
+    });
+
+    const officeFloor = tower.floors.find((floor) => floor.rooms.some((room) => room.id === "sess_office"));
+    expect(officeFloor).toMatchObject({
+      laneId: "office",
+      placement: { source: "repo-rule", truth: "OBSERVED" },
+    });
+
+    const openDesignFloor = tower.floors.find((floor) => floor.rooms.some((room) => room.id === "sess_open_design"));
+    expect(openDesignFloor).toMatchObject({
+      laneId: "labs-university",
+      placement: { source: "repo-rule", truth: "OBSERVED" },
+    });
+
+    const khawDesktopFloor = tower.floors.find((floor) => floor.rooms.some((room) => room.id === "sess_khaw_desktop"));
+    expect(khawDesktopFloor).toMatchObject({
+      laneId: "office",
+      placement: { source: "session-inference", truth: "GAP" },
+    });
+
+    const unknownFloor = tower.floors.find((floor) => floor.rooms.some((room) => room.id === "sess_unknown"));
+    expect(unknownFloor).toMatchObject({
+      laneId: "unknown",
+      placement: { source: "unknown", truth: "GAP" },
+    });
+
+    const labsRoom = labsFloor?.rooms[0];
+    expect(labsRoom?.personas[0]).toMatchObject({
       label: "default",
-      role: "gpt-5.5",
+      kind: "profile-persona",
       truth: "OBSERVED",
     });
+    expect(labsRoom?.workers[0]).toMatchObject({
+      label: "telegram session",
+      execution: "gpt-5.5",
+      truth: "OBSERVED",
+    });
+    expect(tower.floors.flatMap((floor) => floor.rooms.flatMap((room) => room.workers)).some((worker) => worker.label === "Tower President")).toBe(false);
   });
 });

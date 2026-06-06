@@ -1,17 +1,29 @@
-# Hermes-native Claw3D State Surface — Protocol + Implementation Plan
+# Khaw Tower — Hermes-native Protocol + Implementation Plan
 
 Date: 2026-06-05
 Repo: `/home/genie/workspace/agents/university/experiments/Claw3D`
 Branch: `feat/drogo-skyview-split-20260604`
 
+## Product naming update
+
+The product name is **Khaw Tower**.
+
+- A **Khaw Tower** is one spatial/business-tower instance plugged into one local Hermes server through the native read-only protocol.
+- **Hermes** remains the runtime/server substrate and protocol source, not the product name shown to the user.
+- The default local profile/persona is the **Tower President**: the executive building intelligence for this Khaw Tower instance. In local development this role is currently embodied by Drogo, but the product metaphor is business-tower president/operator rather than server-god.
+- The Tower President is not a normal worker duplicated across floors. The President appears through lobby/elevator/chrome, executive notices, inspections, and explicit manifestations.
+- The first two top-level lanes/elevator banks are **Office** and **Labs / University**. Later, Khaw Tower should federate more lanes and squads such as Platform, Desktop, FDE Operations, product squads, and customer/field operations.
+
+Canonical product-model addendum: `docs/hermes/2026-06-05-khaw-tower-product-model.md`.
+
 ## User mandate
 
-Replace the current OpenClaw converter spine with a native, stateful Hermes connection via `http://localhost:9119`.
+Replace the current OpenClaw converter spine with a native, stateful Hermes connection via `http://localhost:9119`, projected as Khaw Tower.
 
 First mode is view-only:
 
 - show what is actually happening on the server;
-- every Wish becomes one floor;
+- every Wish becomes one floor within a top-level lane/elevator bank such as Office or Labs / University;
 - inside each floor, show all agents/profiles/sessions/runs/tasks working in that Wish;
 - make the floor legible to a human, not a raw dashboard;
 - no interaction/mutation yet.
@@ -123,6 +135,28 @@ export type HermesSourceProbe = {
   error?: string;
 };
 
+export type KhawTowerLaneId = "office" | "labs-university" | "ops" | "platform" | "desktop" | "fde-operations" | "unknown";
+
+export type WishPlacement = {
+  laneId: KhawTowerLaneId;
+  laneLabel: string;
+  squadId?: string;
+  squadLabel?: string;
+  floorCode?: string;
+  source: "wish-frontmatter" | "path-rule" | "repo-rule" | "session-inference" | "manual-override" | "unknown";
+  truth: TruthLabel;
+};
+
+export type KhawTowerProjection = {
+  lanes: LaneNode[];
+  floors: WishFloorNode[];
+  rooms: RoomNode[];
+  personas: PersonaNode[];
+  workers: WorkerNode[];
+  desks: DeskNode[];
+  artifacts: ArtifactNode[];
+};
+
 export type HermesSnapshot = {
   at: number;
   truth: TruthLabel;
@@ -139,27 +173,70 @@ export type HermesSnapshot = {
   agents: AgentNode[];
   runs: RunNode[];
   tasks: TaskNode[];
+  khawTower: KhawTowerProjection;
   sources: HermesSourceProbe[];
 };
 ```
 
 Important: Phase 1 may not have first-class `wishes`, `runs`, or `tasks` from 9119. Those must be explicit in the schema anyway, with the truth label showing whether they are observed directly, inferred, or unavailable.
 
-## Wish => floor model
+## Khaw Tower containment model
 
 Containment hierarchy:
 
 ```text
-Tower            = one Hermes server at :9119
-  Lobby          = server/gateway/platform/profile status
-  Floor          = Wish / Goal / active work stream
-    Wing         = profile or lane
-      Room       = session/thread
-        Worker   = profile/agent/run owner avatar
-          Desk   = active run/current task/activity
-          Board  = tasks/claims/evidence when available
-Rooftop/sky      = Drogo server-god projection, omnipresent chrome
+Khaw Tower        = one local spatial instance bound to one Hermes server at :9119
+  Tower President = default profile/persona; executive building intelligence/operator
+  Lobby           = entrance, reception/status wall, elevator bank, server/wire health
+    Elevator Bank = top-level lane/category selector
+      Office      = business/product/customer/operator work lane
+      Labs        = University/research/training/prototype lane
+      Future      = federated lanes/squads: Platform, Desktop, FDE Ops, product squads, etc.
+  Floor           = one Wish / Goal / active workstream inside a lane
+    Department    = role lane inside a Wish: Orchestration, Engineering, Dogfood, Review, Release
+      Room        = session/thread/work context
+        Persona   = stable identity/role/character assigned to work
+        Worker    = actual execution body: model process, coding agent, cron, browser run
+          Desk    = current/latest task, tool, file, proof, activity surface
+          Board   = tasks/claims/evidence/artifacts when available
 ```
+
+The Tower President replaces the earlier `server-god` language. It is the same operational idea—one executive presence for one Hermes-backed tower—but business-tower native: president, operator, concierge, PA system, inspector, and executive control surface.
+
+### Lane / elevator-bank model
+
+Lanes are durable categories above individual Wish floors. They should be visible in the Lobby as elevator banks, not flattened into the same list as transient Wish floors.
+
+Initial lanes:
+
+- `office` — KHAL Office work: products, customer/operator flows, Eugenia, Gupshup, deploy/release, live business operations.
+- `labs-university` — Labs / University work: Claw3D/Khaw Tower R&D, learning society, faculty roles, curriculum, experiments, prototypes.
+
+Future federated lanes/squads:
+
+- `platform` — platform/runtime/source-access/app-registry work.
+- `desktop` — desktop/native client surfaces.
+- `fde-operations` — field/customer deployment and operations.
+- product/customer squads — one lane or squad group per durable business/product domain.
+
+The abstraction should support both:
+
+```text
+Lane -> Wish floors
+Lane -> Squad -> Wish floors
+```
+
+without requiring the UI to rename every Wish or hard-code every future squad.
+
+### Wish placement order
+
+1. Use explicit Wish frontmatter/metadata if present: `lane`, `squad`, `product`, `wish_id`, `wish_slug`.
+2. Else use durable path rules, for example University brain/wish paths map to `labs-university`.
+3. Else use explicit repo/product rules, for example Claw3D/Khaw Tower maps to `labs-university`; Eugenia/Gupshup/release operations map to `office` unless superseded by metadata.
+4. Else infer from session metadata: title, cwd/workdir, handoff state, source, board/task references, model_config cwd.
+5. Else put the session in `unknown` / `Ground Floor` with `truth: OBSERVED` for the session and `placement.truth: GAP` for the lane/Wish association.
+
+Never label inferred lane, squad, or Wish grouping as `VERIFIED`.
 
 ### Floor keying order
 
@@ -171,11 +248,15 @@ Never label inferred Wish grouping as `VERIFIED`.
 
 ### Visual rules
 
-- Floor sign: human title, not UUID.
+- Product title: `Khaw Tower`, not `Hermes Tower`.
+- Lobby: Lumon/business-tower entrance, reception/status wall, and elevator banks for lanes.
+- Elevator bank signs: `Office`, `Labs / University`, and later federated squads/lanes.
+- Floor sign: human Wish/workstream title, not UUID.
 - Lit windows: active/running sessions.
 - Dim windows: idle sessions.
 - Warning desk lamp: error/failure/GAP.
-- Agent pods/avatars: existing avatar projection; Drogo remains rooftop/server-god, not duplicated into every room.
+- Persona/worker split: persona is the stable role/identity; worker is the actual executing process/model/session.
+- Tower President: executive chrome/presence for the whole Khaw Tower; do not duplicate into every room as a normal worker.
 - Room labels: session title/short id + source (telegram/cli/acp/cron/openui/etc.).
 - Desks: current/latest tool/model/work activity, not raw JSON.
 - Inspector click: provenance, endpoint status, timestamps, session IDs, costs/tokens if available.
@@ -187,7 +268,7 @@ Five-second legibility gate: looking at one floor, Felipe must answer: “who is
 Buildable now:
 
 - Server/lobby: `/api/status`, `/api/system/stats`.
-- Wings/profiles: `/api/profiles`.
+- Lanes/personas/profiles: `/api/profiles` plus placement rules/frontmatter/overrides.
 - Rooms/sessions: `/api/sessions?limit=...`.
 - Occupancy metrics: `/api/sessions/stats`.
 - Cost/model heat: `/api/analytics/usage?days=1`, `/api/analytics/models?days=1` if endpoint responds cleanly.
@@ -220,9 +301,11 @@ Add new native path in parallel:
   - `onRuntimeEvent()` emits `summary-refresh` and synthetic lifecycle events from snapshot diffs.
 
 - `src/lib/world/hermesSnapshotProjection.ts`
-  - maps `HermesSnapshot -> floors/rooms/workers/desks`;
+  - maps `HermesSnapshot -> KhawTowerProjection`;
+  - groups Wish floors under lane/elevator-bank placement (`office`, `labs-university`, later federated lanes/squads);
+  - separates persona projections from worker/execution projections;
   - truth labels on every object;
-  - Drogo rooftop/omnipresent policy.
+  - Tower President policy: one executive building presence, not duplicated as a normal worker.
 
 - Register provider in `createRuntimeProvider.ts` under `hermes-native` or current `hermes` with feature flag.
 
@@ -266,11 +349,12 @@ Build only the protocol and projection spine:
 1. Add read-only `/api/hermes/snapshot`.
 2. Add `HermesSnapshot` types and projection mapper.
 3. Add provider skeleton or direct hook consuming snapshot.
-4. Render a minimal `Hermes Tower` state in existing Claw3D surface:
-   - Lobby = server status.
-   - One floor per derived Wish group.
+4. Render a minimal `Khaw Tower` state in existing Claw3D surface:
+   - Lobby = business-tower entrance plus server/wire status.
+   - Elevator banks = `Office` and `Labs / University`.
+   - One floor per derived Wish group inside a lane.
    - One room per session.
-   - One worker per profile/session owner.
+   - Persona + worker split visible where data allows.
    - Truth labels visible: `OBSERVED` / `GAP`.
 5. Verify with local browser:
    - network only same-origin `/api/hermes/snapshot`;
@@ -286,7 +370,7 @@ Do not add interactions yet.
 - Leaking Hermes dashboard session token/cookie into the browser.
 - Rendering empty floors when an endpoint 401s/timeouts; should be `GAP`, not “nobody working”.
 - Calling inferred Wish grouping verified.
-- Duplicating Drogo into every floor; Drogo is rooftop/skyview chrome.
+- Duplicating the Tower President into every floor; the President is tower-level executive chrome/presence.
 - Blocking Claw3D on Khortex; Khortex is currently unhealthy.
 - Deleting OpenClaw before Hermes-native proof.
 - Raw JSON as the product surface.
@@ -296,13 +380,15 @@ Do not add interactions yet.
 Local runtime at `/office` visibly shows:
 
 ```text
-Hermes Tower — OBSERVED
+Khaw Tower — OBSERVED
 source: http://localhost:9119
 Lobby: Hermes 0.15.1, gateway running, connected platforms
-Floor: <derived Wish / Unassigned>
+Elevator bank: Office / Labs-University / Unknown
+Floor: <derived Wish / Unassigned> inside its lane
 Room: <real session title/source/model>
-Worker: <profile/agent/session owner>
-truth: OBSERVED for session, GAP if Wish association inferred/unavailable
+Persona: <stable role/profile where known>
+Worker: <actual session/model/process where known>
+truth: OBSERVED for session, GAP if lane/Wish association inferred/unavailable
 ```
 
 The proof is not complete until browser console is clean and the API/source counts match the rendered tower.

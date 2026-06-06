@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createRuntimeProvider } from "@/lib/runtime/createRuntimeProvider";
 import type { HermesSnapshot } from "@/lib/runtime/hermes-native/types";
 import { projectHermesSnapshotToTower } from "@/lib/world/hermesSnapshotProjection";
 
@@ -22,47 +23,35 @@ export function HermesTowerPanel() {
     error: null,
   });
 
+  const provider = useMemo(
+    () => createRuntimeProvider("hermes-native", null, "/api/hermes/snapshot"),
+    [],
+  );
+
   useEffect(() => {
     let cancelled = false;
-    let timer: number | null = null;
+    const unsubscribe = provider.onRuntimeEvent((event) => {
+      if (event.type !== "summary-refresh") return;
+      const snapshot = event.snapshot ?? (event.frame.payload as HermesSnapshot | undefined);
+      if (!snapshot || cancelled) return;
+      setState({ status: "ready", snapshot, error: null });
+    });
 
-    const load = async () => {
-      try {
-        const response = await fetch("/api/hermes/snapshot", {
-          headers: { Accept: "application/json" },
-          cache: "no-store",
-        });
-        const payload = (await response.json()) as unknown;
-        if (cancelled) return;
-        if (!response.ok) {
-          const message =
-            payload && typeof payload === "object" && "detail" in payload
-              ? String((payload as { detail?: unknown }).detail)
-              : `Hermes snapshot failed (${response.status}).`;
-          setState({ status: "error", snapshot: null, error: message });
-          return;
-        }
-        setState({ status: "ready", snapshot: payload as HermesSnapshot, error: null });
-      } catch (error) {
-        if (cancelled) return;
-        setState({
-          status: "error",
-          snapshot: null,
-          error: error instanceof Error ? error.message : "Hermes snapshot failed.",
-        });
-      } finally {
-        if (!cancelled) {
-          timer = window.setTimeout(load, 2_500);
-        }
-      }
-    };
+    void provider.connect({ gatewayUrl: "/api/hermes/snapshot" }).catch((error) => {
+      if (cancelled) return;
+      setState({
+        status: "error",
+        snapshot: null,
+        error: error instanceof Error ? error.message : "Hermes snapshot failed.",
+      });
+    });
 
-    void load();
     return () => {
       cancelled = true;
-      if (timer !== null) window.clearTimeout(timer);
+      unsubscribe();
+      provider.disconnect();
     };
-  }, []);
+  }, [provider]);
 
   const tower = useMemo(
     () => (state.snapshot ? projectHermesSnapshotToTower(state.snapshot) : null),
@@ -72,15 +61,17 @@ export function HermesTowerPanel() {
   return (
     <aside
       className="pointer-events-auto fixed right-3 top-3 z-[70] w-[380px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-white/20 bg-black/82 font-mono text-white shadow-2xl backdrop-blur"
-      aria-label="Hermes native tower state"
+      aria-label="Khaw Tower native state"
       data-testid="hermes-tower-panel"
     >
       <div className="border-b border-white/10 px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.22em] text-white/45">Hermes native</div>
+            <div className="text-[10px] uppercase tracking-[0.22em] text-white/45">
+              Native Hermes protocol
+            </div>
             <h2 className="mt-1 text-sm font-semibold tracking-[0.18em] text-white">
-              Hermes Tower
+              {tower?.title ?? "Khaw Tower"}
             </h2>
           </div>
           <span
@@ -96,6 +87,11 @@ export function HermesTowerPanel() {
         <div className="mt-2 text-[11px] text-white/55">
           source: {tower?.source ?? "http://localhost:9119"}
         </div>
+        {tower ? (
+          <div className="mt-1 text-[11px] text-white/55">
+            President: {tower.president.label} · {tower.president.personaLabel}
+          </div>
+        ) : null}
       </div>
 
       {state.status === "loading" ? (
@@ -121,6 +117,29 @@ export function HermesTowerPanel() {
             </div>
           </section>
 
+          <section className="mt-3 rounded-lg border border-white/10 bg-white/[0.035] p-3">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-white/45">
+              Elevator banks
+            </div>
+            <div className="mt-2 grid gap-2">
+              {tower.lanes.map((lane) => (
+                <div
+                  key={lane.id}
+                  className="rounded border border-white/8 bg-black/25 px-2 py-1"
+                  data-khaw-lane={lane.id}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold text-white/80">{lane.label}</span>
+                    <span className="text-[10px] uppercase tracking-[0.14em] text-white/45">
+                      {lane.floorCount} floor{lane.floorCount === 1 ? "" : "s"} · {lane.truth}
+                    </span>
+                  </div>
+                  <div className="mt-1 truncate text-[10px] text-white/40">{lane.description}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section className="mt-3 space-y-2">
             <div className="text-[10px] uppercase tracking-[0.18em] text-white/45">
               Wish floors: {tower.floors.length || "none"}
@@ -139,7 +158,7 @@ export function HermesTowerPanel() {
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="truncate text-[12px] font-semibold text-white">{floor.label}</h3>
                   <span className="text-[10px] uppercase tracking-[0.14em] text-amber-100/70">
-                    {floor.association} · {floor.truth}
+                    {floor.placement.laneLabel} · {floor.placement.source} · {floor.truth}
                   </span>
                 </div>
                 <div className="mt-1 text-[11px] text-white/50">
@@ -150,7 +169,7 @@ export function HermesTowerPanel() {
                     <div key={room.id} className="rounded border border-white/8 bg-black/25 px-2 py-1">
                       <div className="truncate text-[11px] text-white/80">Room: {room.label}</div>
                       <div className="truncate text-[10px] text-white/45">
-                        source: {room.source ?? "unknown"} · worker: {room.workers[0]?.label ?? "unknown"} · model: {room.model ?? "unknown"}
+                        source: {room.source ?? "unknown"} · persona: {room.personas[0]?.label ?? "unknown"} · worker: {room.workers[0]?.label ?? "unknown"}
                       </div>
                     </div>
                   ))}

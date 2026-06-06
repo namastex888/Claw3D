@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
 import { buildHermesSnapshot, type HermesFetchResult } from "@/lib/runtime/hermes-native/snapshot";
+import type { HermesSnapshot } from "@/lib/runtime/hermes-native/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DEFAULT_HERMES_URL = "http://127.0.0.1:9119";
 const TOKEN_RE = /__HERMES_SESSION_TOKEN__\s*=\s*['\"]([^'\"]+)['\"]/;
+const HERMES_FETCH_TIMEOUT_MS = Number(process.env.HERMES_NATIVE_FETCH_TIMEOUT_MS || 15_000);
+const SNAPSHOT_CACHE_TTL_MS = Number(process.env.HERMES_NATIVE_SNAPSHOT_CACHE_TTL_MS || 2_500);
 
 let cachedToken: { value: string; expiresAt: number } | null = null;
+let cachedSnapshot: { value: HermesSnapshot; expiresAt: number } | null = null;
+let inFlightSnapshot: Promise<HermesSnapshot> | null = null;
 
 const normalizeBaseUrl = (value: string): string => {
   const parsed = new URL(value.trim() || DEFAULT_HERMES_URL);
@@ -64,7 +69,7 @@ const makeHermesFetcher = (baseUrl: string, token: string | null) => async (
           : null),
       },
       cache: "no-store",
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(HERMES_FETCH_TIMEOUT_MS),
     });
     const contentType = response.headers.get("content-type") ?? "";
     const text = await response.text();
@@ -90,19 +95,41 @@ const makeHermesFetcher = (baseUrl: string, token: string | null) => async (
 
 export async function GET() {
   try {
-    const baseUrl = normalizeBaseUrl(process.env.HERMES_DASHBOARD_URL || DEFAULT_HERMES_URL);
-    const token = await fetchDashboardToken(baseUrl);
-    const snapshot = await buildHermesSnapshot({
-      baseUrl,
-      fetchJson: makeHermesFetcher(baseUrl, token),
-    });
+    const now = Date.now();
+    if (cachedSnapshot && cachedSnapshot.expiresAt > now) {
+      return NextResponse.json(cachedSnapshot.value, {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store",
+          "X-Hermes-Snapshot-Cache": "hit",
+        },
+      });
+    }
+
+    const wasCoalesced = Boolean(inFlightSnapshot);
+    const snapshotPromise = inFlightSnapshot ?? (async () => {
+      const baseUrl = normalizeBaseUrl(process.env.HERMES_DASHBOARD_URL || DEFAULT_HERMES_URL);
+      const token = await fetchDashboardToken(baseUrl);
+      const snapshot = await buildHermesSnapshot({
+        baseUrl,
+        fetchJson: makeHermesFetcher(baseUrl, token),
+      });
+      cachedSnapshot = { value: snapshot, expiresAt: Date.now() + SNAPSHOT_CACHE_TTL_MS };
+      return snapshot;
+    })();
+
+    inFlightSnapshot = snapshotPromise;
+    const snapshot = await snapshotPromise;
+    if (inFlightSnapshot === snapshotPromise) inFlightSnapshot = null;
     return NextResponse.json(snapshot, {
       status: 200,
       headers: {
         "Cache-Control": "no-store",
+        "X-Hermes-Snapshot-Cache": wasCoalesced ? "coalesced" : "miss",
       },
     });
   } catch (error) {
+    inFlightSnapshot = null;
     const message = error instanceof Error ? error.message : "Hermes snapshot failed.";
     return NextResponse.json(
       {

@@ -28,8 +28,8 @@ describe("office floor registry", () => {
 
   it("looks up floors by id", () => {
     expect(getOfficeFloor("hermes-first")).toMatchObject({
-      label: "Hermes Floor",
-      shortLabel: "Hermes",
+      label: "Khaw Tower Floor",
+      shortLabel: "Khaw",
       provider: "hermes",
       kind: "runtime",
       zone: "building",

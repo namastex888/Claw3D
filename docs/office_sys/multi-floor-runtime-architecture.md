@@ -23,18 +23,43 @@ This is the bridge from the merged runtime seam work into Office Systems.
 
 The user should think in places, not provider toggles.
 
+Current product name: **Khaw Tower**.
+
+A Khaw Tower is one business/spatial tower instance connected to one local Hermes server through the native protocol. Hermes is the runtime substrate; Khaw Tower is the product surface. The default local profile/persona acts as the **Tower President**: the executive operator and building intelligence for that tower, not a normal per-room worker.
+
+The Lobby should behave like a business-tower entrance with elevator banks. The user enters the tower, sees building health and outside-wire status, then chooses a lane/elevator bank and a Wish floor.
+
+Top-level lanes/elevator banks start with:
+
+- `Office`
+  - business/product/customer/operator work: KHAL Office, Eugenia, Gupshup, deploy/release, live operations.
+- `Labs / University`
+  - research, training, Claw3D/Khaw Tower R&D, learning society, faculty roles, curriculum, experiments, prototypes.
+
+Later federation should add durable lanes/squads such as:
+
+- `Platform`
+- `Desktop`
+- `FDE Operations`
+- product/customer squads
+- any other long-lived business unit that deserves its own elevator bank or squad stack
+
+Individual Wishes remain floors. `University` and `KHAL Office` are not single floors; they are lanes/elevator banks that contain many Wish floors.
+
 Examples:
 
 - `Lobby`
   - onboarding, demo, reception, visitor flow
-- `OpenClaw Floor`
-  - default upstream team
-- `Hermes Floor`
-  - supervisor / orchestration team
-- `Custom Floor`
-  - downstream/orchestrator/runtime experiments
-- `Training Floor`
-  - classrooms, auditorium, distillation labs, evals, coaching, simulations
+- `Office Elevator Bank`
+  - KHAL Office and business/operator Wish floors
+- `Labs / University Elevator Bank`
+  - classrooms, auditorium, distillation labs, evals, coaching, simulations, Khaw Tower R&D floors
+- `Platform Squad Stack`
+  - platform/runtime/source-access/app-registry Wish floors
+- `Desktop Squad Stack`
+  - desktop/native-client Wish floors
+- `FDE Operations Stack`
+  - field/customer deployment and operations Wish floors
 - `Trader's Floor`
   - event streams, signals, analyst desks, execution pits
 - `Outside / Campus`
@@ -192,17 +217,38 @@ The first concrete implementation step should be a floor registry.
 
 Required fields:
 
+- lane / elevator bank id
+- optional squad id for future federation
 - floor id
 - label
 - provider
 - zone / level kind
 - connection profile key
 - whether the floor is enabled
+- placement provenance and truth label for dynamic Wish floors
 
 Suggested shape:
 
 ```ts
 type FloorProvider = "openclaw" | "hermes" | "custom" | "demo";
+
+type TowerLaneId =
+  | "office"
+  | "labs-university"
+  | "platform"
+  | "desktop"
+  | "fde-operations"
+  | "unknown";
+
+type PlacementSource =
+  | "wish-frontmatter"
+  | "path-rule"
+  | "repo-rule"
+  | "session-inference"
+  | "manual-override"
+  | "unknown";
+
+type TruthLabel = "OBSERVED" | "VERIFIED" | "GAP" | "SIMULATED";
 
 type FloorId =
   | "lobby"
@@ -216,11 +262,31 @@ type FloorId =
 type FloorDefinition = {
   id: FloorId;
   label: string;
+  laneId: TowerLaneId;
+  squadId?: string;
   provider: FloorProvider;
   kind: "core" | "support" | "simulation" | "outside";
   enabled: boolean;
   runtimeProfileId: string | null;
+  placementSource?: PlacementSource;
+  placementTruth?: TruthLabel;
 };
+```
+
+Static floors can keep simple definitions. Dynamic Wish floors should carry placement metadata so the UI can distinguish:
+
+- verified lane placement from explicit Wish metadata;
+- observed placement from path/repo rules;
+- inferred placement from session title/workdir;
+- unknown placement shown as `GAP` instead of pretending the floor is classified.
+
+The implementation should support both flat lanes and future squad nesting:
+
+```text
+Office -> Wish floors
+Labs / University -> Wish floors
+Platform -> Runtime Squad -> Wish floors
+FDE Operations -> Customer Squad -> Wish floors
 ```
 
 ## Persistent Per-Floor Runtime State

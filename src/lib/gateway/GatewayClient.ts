@@ -917,6 +917,43 @@ export const useGatewayConnection = (
       }
       return;
     }
+    if (selectedAdapterType === "hermes") {
+      setStatus("connecting");
+      try {
+        await settingsCoordinator.flushPending();
+        const response = await fetch("/api/hermes/snapshot", {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error(`Hermes native snapshot failed (${response.status}).`);
+        }
+        setDetectedAdapterType("hermes");
+        setHasLastKnownGoodState(true);
+        setStatus("connected");
+        setConnectErrorCode(null);
+        settingsCoordinator.schedulePatch({
+          gateway: {
+            lastKnownGood: {
+              url: gatewayUrl.trim() || "hermes-native:/api/hermes/snapshot",
+              token: token || undefined,
+              adapterType: "hermes",
+            },
+          },
+        }, 0);
+        gatewayDebugLog("connect:hermes-native-success", { snapshotUrl: "/api/hermes/snapshot" });
+      } catch (err) {
+        setStatus("disconnected");
+        setDetectedAdapterType(null);
+        setConnectErrorCode("studio.hermes_native_snapshot_failed");
+        setError(formatGatewayError(err));
+        gatewayDebugLog("connect:hermes-native-failed", {
+          selectedAdapterType,
+          message: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return;
+    }
     try {
       await settingsCoordinator.flushPending();
       const maxAttempts = resolveInitialGatewayConnectAttemptCount(

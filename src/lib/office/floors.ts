@@ -58,8 +58,8 @@ export const OFFICE_FLOORS: readonly FloorDefinition[] = [
   },
   {
     id: "hermes-first",
-    label: "Hermes Floor",
-    shortLabel: "Hermes",
+    label: "Khaw Tower Floor",
+    shortLabel: "Khaw",
     provider: "hermes",
     kind: "runtime",
     zone: "building",
