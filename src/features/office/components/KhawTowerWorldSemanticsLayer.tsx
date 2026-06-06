@@ -58,9 +58,10 @@ function FloorSignObject({ sign }: { sign: KhawWorldFloorSign }) {
       </mesh>
       <Html transform center distanceFactor={5.5} position={[0, 0, 0.08]}>
         <div
-          className="w-[170px] rounded-xl border border-cyan-200/25 bg-slate-950/88 p-2 font-mono text-white shadow-2xl backdrop-blur-sm"
+          className="w-[150px] rounded-lg border border-cyan-200/25 bg-slate-950/86 p-2 font-mono text-white shadow-2xl backdrop-blur-sm"
           data-khaw-floor-sign={sign.label}
           data-khaw-world-diegetic="floor-sign"
+          data-khaw-world-diegetic-detail="detail-plaque"
         >
           <div className="flex items-center justify-between gap-2">
             <div className="text-[9px] uppercase tracking-[0.18em] text-cyan-100/60">Floor sign</div>
@@ -77,52 +78,91 @@ function FloorSignObject({ sign }: { sign: KhawWorldFloorSign }) {
   );
 }
 
-function RoomBadgeObject({ badge }: { badge: KhawWorldRoomBadge }) {
+function RoomMarkerObject({ badge }: { badge: KhawWorldRoomBadge }) {
   return (
-    <group position={htmlPosition(badge.position)} data-khaw-spatial-object="room-badge">
-      <mesh position={[0, -0.08, -0.03]}>
-        <boxGeometry args={[2.25, 0.72, 0.06]} />
-        <meshStandardMaterial color="#1f1028" emissive="#4a044e" emissiveIntensity={0.14} />
+    <group position={htmlPosition(badge.position)} data-khaw-spatial-object="room-marker">
+      <mesh position={[0, -0.05, -0.03]}>
+        <boxGeometry args={[0.72, 0.38, 0.08]} />
+        <meshStandardMaterial color="#1f1028" emissive="#4a044e" emissiveIntensity={0.18} />
       </mesh>
-      <Html transform center distanceFactor={5.5} position={[0, 0, 0.08]}>
+      <mesh position={[0.33, 0.14, 0.03]}>
+        <sphereGeometry args={[0.08, 12, 8]} />
+        <meshStandardMaterial color={truthMaterialColor(badge.truth)} emissive={truthMaterialColor(badge.truth)} emissiveIntensity={0.35} />
+      </mesh>
+      <Html transform center distanceFactor={7.5} position={[0, 0, 0.08]}>
         <div
-          className="w-[155px] rounded-lg border border-fuchsia-200/20 bg-black/82 p-2 font-mono text-white shadow-xl backdrop-blur-sm"
-          data-khaw-room-badge={badge.label}
-          data-khaw-world-diegetic="room-badge"
+          className="rounded-md border border-fuchsia-200/20 bg-black/72 px-1.5 py-1 font-mono text-[8px] uppercase tracking-[0.12em] text-fuchsia-50 shadow-lg backdrop-blur-sm"
+          title={`${badge.label} · ${badge.reason}`}
+          data-khaw-room-marker={badge.label}
+          data-khaw-world-diegetic="room-marker"
         >
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-[9px] uppercase tracking-[0.18em] text-fuchsia-100/62">Room badge</div>
-            {chip(badge.truth, badge.truthChip.reason)}
-          </div>
-          <div className="mt-1 truncate text-[11px] font-semibold text-white/90">{badge.label}</div>
-          <div className="mt-1 truncate text-[9px] text-white/55">
-            {badge.persona} · {badge.source ?? "unknown source"} · {badge.freshness}
-          </div>
-          <div className="mt-1 truncate text-[9px] text-white/40">model: {badge.model ?? "unknown"}</div>
+          Room · {badge.truth}
         </div>
       </Html>
     </group>
   );
 }
 
-function WorkerPodObject({ pod }: { pod: KhawWorldWorkerPod }) {
+function WorkerMarkerObject({ pod }: { pod: KhawWorldWorkerPod }) {
   return (
-    <group position={htmlPosition(pod.position)} data-khaw-spatial-object="worker-pod">
-      <mesh position={[-0.82, 0, 0]}>
+    <group position={htmlPosition(pod.position)} data-khaw-spatial-object="worker-marker">
+      <mesh position={[0, 0, 0]}>
         <sphereGeometry args={[0.16, 16, 12]} />
         <meshStandardMaterial color={truthMaterialColor(pod.truth)} emissive={truthMaterialColor(pod.truth)} emissiveIntensity={0.28} />
       </mesh>
-      <Html transform center distanceFactor={5.5} position={[0, 0, 0.08]}>
+      <Html transform center distanceFactor={8} position={[0.42, 0.08, 0.08]}>
         <div
-          className="w-[145px] rounded-full border border-emerald-200/20 bg-emerald-950/78 px-3 py-2 font-mono text-white shadow-xl backdrop-blur-sm"
-          data-khaw-worker-pod={pod.label}
-          data-khaw-world-diegetic="worker-pod"
+          className="rounded-full border border-emerald-200/20 bg-emerald-950/72 px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.12em] text-emerald-50 shadow-lg backdrop-blur-sm"
+          title={`${pod.label} · ${pod.reason}`}
+          data-khaw-worker-marker={pod.label}
+          data-khaw-world-diegetic="worker-marker"
         >
-          <div className="flex items-center justify-between gap-2">
-            <div className="truncate text-[10px] font-semibold text-emerald-50">{pod.label}</div>
-            {chip(pod.truth, pod.truthChip.reason)}
+          Pod · {pod.truth}
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function FocusInspectorObject({
+  room,
+  worker,
+}: {
+  room: KhawWorldRoomBadge | undefined;
+  worker: KhawWorldWorkerPod | undefined;
+}) {
+  return (
+    <group position={[3.85, 2.45, -4.15]} data-khaw-spatial-object="focus-inspector">
+      <mesh position={[0, -0.08, -0.04]}>
+        <boxGeometry args={[2.75, 1.28, 0.08]} />
+        <meshStandardMaterial color="#020617" emissive="#0e7490" emissiveIntensity={0.16} />
+      </mesh>
+      <Html transform center distanceFactor={6.4} position={[0, 0, 0.08]}>
+        <div
+          className="w-[205px] rounded-xl border border-white/18 bg-black/80 p-2.5 font-mono text-white shadow-2xl backdrop-blur-sm"
+          data-testid="khaw-world-focus-inspector"
+          data-khaw-world-diegetic="focus-inspector"
+          data-khaw-world-diegetic-detail="detail-plaque"
+        >
+          <div className="text-[9px] uppercase tracking-[0.2em] text-cyan-100/70">Focus inspector</div>
+          <div className="mt-1 text-[10px] leading-snug text-white/58">
+            Inspectable markers stay small at rest; details live in this single focus plaque.
           </div>
-          <div className="mt-0.5 truncate text-[9px] text-emerald-50/58">worker pod · {pod.model ?? "unknown model"}</div>
+          {room ? (
+            <div className="mt-2 rounded-lg border border-fuchsia-200/14 bg-fuchsia-950/25 p-2">
+              <div className="truncate text-[10px] font-semibold text-fuchsia-50">{room.label}</div>
+              <div className="mt-1 flex items-center gap-1.5 text-[9px] text-white/58">
+                <span className="truncate">{room.source ?? "unknown"}</span>
+                {chip(room.truth, room.truthChip.reason)}
+              </div>
+            </div>
+          ) : null}
+          {worker ? (
+            <div className="mt-1.5 rounded-lg border border-emerald-200/14 bg-emerald-950/25 p-2">
+              <div className="truncate text-[10px] font-semibold text-emerald-50">{worker.label}</div>
+              <div className="mt-1 text-[9px] text-white/50">model: {worker.model ?? "unknown"}</div>
+            </div>
+          ) : null}
         </div>
       </Html>
     </group>
@@ -130,9 +170,11 @@ function WorkerPodObject({ pod }: { pod: KhawWorldWorkerPod }) {
 }
 
 function WorldSemanticsObjects({ world }: { world: KhawTowerWorldSemantics }) {
-  const floorSigns = world.floorSigns.slice(0, 3);
+  const floorSigns = world.floorSigns.slice(0, 2);
   const roomBadges = world.roomBadges.slice(0, 3);
   const workerPods = world.workerPods.slice(0, 3);
+  const focusRoom = roomBadges[0];
+  const focusWorker = workerPods[0];
 
   return (
     <group
@@ -143,6 +185,7 @@ function WorldSemanticsObjects({ world }: { world: KhawTowerWorldSemantics }) {
           className="w-[285px] rounded-xl border border-cyan-300/25 bg-black/72 px-3 py-2 font-mono text-white shadow-xl backdrop-blur-sm"
           data-testid="khaw-world-semantics-layer"
           data-khaw-world-semantics="diegetic"
+          data-khaw-semantic-density="progressive-disclosure"
           data-khaw-world-diegetic="summary"
         >
           <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-100/75">World semantics</div>
@@ -150,8 +193,9 @@ function WorldSemanticsObjects({ world }: { world: KhawTowerWorldSemantics }) {
         </div>
       </Html>
       {floorSigns.map((sign) => <FloorSignObject key={sign.id} sign={sign} />)}
-      {roomBadges.map((badge) => <RoomBadgeObject key={badge.id} badge={badge} />)}
-      {workerPods.map((pod) => <WorkerPodObject key={pod.id} pod={pod} />)}
+      {roomBadges.map((badge) => <RoomMarkerObject key={badge.id} badge={badge} />)}
+      {workerPods.map((pod) => <WorkerMarkerObject key={pod.id} pod={pod} />)}
+      <FocusInspectorObject room={focusRoom} worker={focusWorker} />
     </group>
   );
 }

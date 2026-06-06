@@ -117,11 +117,18 @@ describe("KhawTowerWorldSemanticsLayer", () => {
     render(React.createElement(KhawTowerWorldSemanticsLayer));
 
     await waitFor(() => expect(screen.getByTestId("khaw-world-semantics-layer")).toBeTruthy());
-    expect(screen.getByTestId("khaw-world-semantics-layer").getAttribute("data-khaw-world-semantics")).toBe("diegetic");
+    const layer = screen.getByTestId("khaw-world-semantics-layer");
+    expect(layer.getAttribute("data-khaw-world-semantics")).toBe("diegetic");
+    expect(layer.getAttribute("data-khaw-semantic-density")).toBe("progressive-disclosure");
     expect(screen.getByText("World semantics")).toBeTruthy();
     expect(screen.getByText("Floor sign")).toBeTruthy();
-    expect(screen.getByText("Room badge")).toBeTruthy();
-    expect(screen.getAllByText(/worker pod/).length).toBeGreaterThan(0);
+    expect(screen.getByText("Focus inspector")).toBeTruthy();
+    expect(screen.getByText("Inspectable markers stay small at rest; details live in this single focus plaque.")).toBeTruthy();
+    expect(document.querySelectorAll('[data-khaw-world-diegetic="room-marker"]').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('[data-khaw-world-diegetic="worker-marker"]').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('[data-khaw-world-diegetic="room-badge"]').length).toBe(0);
+    expect(document.querySelectorAll('[data-khaw-world-diegetic="worker-pod"]').length).toBe(0);
+    expect(document.querySelectorAll('[data-khaw-world-diegetic="detail-plaque"]').length).toBeLessThanOrEqual(4);
     expect(screen.getAllByText("GAP").length).toBeGreaterThan(0);
     expect(screen.getAllByText("OBSERVED").length).toBeGreaterThan(0);
     expect(providerHandlers.createRuntimeProvider).toHaveBeenCalledWith(

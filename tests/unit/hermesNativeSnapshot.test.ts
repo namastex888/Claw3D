@@ -22,14 +22,13 @@ describe("Hermes native snapshot", () => {
             },
           };
         }
-        if (pathname === "/api/profiles") {
+        if (pathname === "/api/config") {
           return {
             ok: true,
             status: 200,
             data: {
-              profiles: [
-                { name: "default", model: "gpt-5.5", provider: "openai-codex", gateway_running: true },
-              ],
+              model: "gpt-5.5",
+              provider: "openai-codex",
             },
           };
         }

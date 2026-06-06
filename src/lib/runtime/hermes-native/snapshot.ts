@@ -70,21 +70,37 @@ const normalizePlatforms = (statusData: unknown) => {
 };
 
 const normalizeProfiles = (profilesData: unknown): HermesProfileNode[] => {
-  if (!isRecord(profilesData) || !Array.isArray(profilesData.profiles)) return [];
-  return profilesData.profiles
-    .filter(isRecord)
-    .map((profile, index): HermesProfileNode => {
-      const name = asString(profile.name) ?? `profile-${index + 1}`;
-      return {
-        id: name,
-        name,
-        model: asString(profile.model),
-        provider: asString(profile.provider),
-        gatewayRunning: asBoolean(profile.gateway_running),
-        skillCount: asNumber(profile.skill_count),
-        truth: "OBSERVED",
-      };
-    });
+  if (!isRecord(profilesData)) return [];
+  if (Array.isArray(profilesData.profiles)) {
+    return profilesData.profiles
+      .filter(isRecord)
+      .map((profile, index): HermesProfileNode => {
+        const name = asString(profile.name) ?? `profile-${index + 1}`;
+        return {
+          id: name,
+          name,
+          model: asString(profile.model),
+          provider: asString(profile.provider),
+          gatewayRunning: asBoolean(profile.gateway_running),
+          skillCount: asNumber(profile.skill_count),
+          truth: "OBSERVED",
+        };
+      });
+  }
+
+  const model = asString(profilesData.model);
+  const provider = asString(profilesData.provider);
+  return [
+    {
+      id: "default",
+      name: "default",
+      model,
+      provider,
+      gatewayRunning: null,
+      skillCount: null,
+      truth: "OBSERVED",
+    },
+  ];
 };
 
 const normalizeSessionTitle = (session: Record<string, unknown>): string => {
@@ -128,13 +144,16 @@ export async function buildHermesSnapshot({
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
   const endpoints = [
     "/api/status",
-    "/api/profiles",
+    "/api/config",
     "/api/sessions?limit=100&offset=0",
     "/api/sessions/stats",
   ] as const;
 
-  const [statusResult, profilesResult, sessionsResult, sessionStatsResult] =
-    await Promise.all(endpoints.map((endpoint) => fetchJson(endpoint)));
+  const results: HermesFetchResult[] = [];
+  for (const endpoint of endpoints) {
+    results.push(await fetchJson(endpoint));
+  }
+  const [statusResult, profilesResult, sessionsResult, sessionStatsResult] = results;
 
   const sources = [
     sourceProbe(endpoints[0], statusResult, at),

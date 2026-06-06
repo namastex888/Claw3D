@@ -8,44 +8,13 @@ import {
   WALK_ANIM_SPEED,
 } from "@/features/retro-office/core/constants";
 import { toWorld } from "@/features/retro-office/core/geometry";
+import { buildAgentOverheadTextState } from "@/features/retro-office/objects/agentOverheadText";
 import type {
   JanitorActor,
   RenderAgent,
 } from "@/features/retro-office/core/types";
 import { AgentModelProps } from "@/features/retro-office/objects/types";
-
-const MAX_NAMEPLATE_TEXT_LENGTH = 10;
-const MAX_SPEECH_BUBBLE_TEXT_LENGTH = 180;
 const MAX_SPEECH_BUBBLE_LINES = 4;
-
-const formatAgentNameplateText = (value: string): string => {
-  const normalized = value.replace(/\s+/g, " ").trim();
-  if (!normalized) return "";
-  if (normalized.length <= MAX_NAMEPLATE_TEXT_LENGTH) return normalized;
-  const [firstName] = normalized.split(" ");
-  return firstName || normalized;
-};
-
-const flattenSpeechBubbleMarkdown = (value: string) =>
-  value
-    .replace(/```[\s\S]*?```/g, " [code] ")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/^>\s*/gm, "")
-    .replace(/^[-*+]\s+/gm, "")
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/[*_~]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-const clampSpeechBubbleText = (value: string) => {
-  if (value.length <= MAX_SPEECH_BUBBLE_TEXT_LENGTH) {
-    return { text: value, truncated: false };
-  }
-  const slice = value.slice(0, MAX_SPEECH_BUBBLE_TEXT_LENGTH - 1).trimEnd();
-  return { text: `${slice}…`, truncated: true };
-};
 
 export const AgentModel = memo(function AgentModel({
   agentId,
@@ -63,6 +32,7 @@ export const AgentModel = memo(function AgentModel({
   showSpeech = false,
   speechText = null,
   suppressSpeechBubble = false,
+  suppressNameplate = false,
 }: AgentModelProps) {
   const groupRef = useRef<THREE.Group>(null);
   const leftArmRef = useRef<THREE.Group>(null);
@@ -609,21 +579,21 @@ export const AgentModel = memo(function AgentModel({
     return texture;
   }, [skin]);
 
-  const resolvedSpeechText =
-    showSpeech && speechText?.trim()
-      ? speechText.trim()
-      : status === "error"
-        ? "error"
-        : "...";
-  const activeSpeechBubble = showSpeech && Boolean(speechText?.trim());
-  const normalizedSpeechBubbleText = activeSpeechBubble
-    ? flattenSpeechBubbleMarkdown(resolvedSpeechText)
-    : resolvedSpeechText;
-  const speechBubblePreview = activeSpeechBubble
-    ? clampSpeechBubbleText(normalizedSpeechBubbleText)
-    : { text: normalizedSpeechBubbleText, truncated: false };
-  const speechBubbleDisplayText = speechBubblePreview.text;
-  const speechBubbleWasTruncated = speechBubblePreview.truncated;
+  const {
+    activeSpeechBubble,
+    nameplateText,
+    showNameplate,
+    speechBubbleDisplayText,
+    speechBubbleWasTruncated,
+    subtitleText,
+  } = buildAgentOverheadTextState({
+    name,
+    speechText,
+    showSpeech,
+    status,
+    subtitle,
+    suppressNameplate,
+  });
   const speechBubbleTextLength = speechBubbleDisplayText.length;
   const speechBubbleWidth = activeSpeechBubble
     ? Math.min(4.6, Math.max(1.8, 1.55 + speechBubbleTextLength * 0.018))
@@ -671,8 +641,6 @@ export const AgentModel = memo(function AgentModel({
         : "#8dc4ff"
     : "transparent";
   const speechBubbleBorderInset = activeSpeechBubble ? 0.03 : 0;
-  const nameplateText = name ? formatAgentNameplateText(name) : "";
-  const subtitleText = typeof subtitle === "string" ? subtitle.trim() : "";
   const nameplateFontSize =
     nameplateText.length > 9 ? 0.118 : nameplateText.length > 7 ? 0.13 : 0.144;
 
@@ -1130,7 +1098,7 @@ export const AgentModel = memo(function AgentModel({
           depthWrite={false}
         />
       </mesh>
-      {!activeSpeechBubble && nameplateText ? (
+      {showNameplate ? (
         <Billboard position={[0, 1.05, 0]}>
           <mesh position={[0, 0, -0.001]}>
             <planeGeometry args={[0.82, subtitleText ? 0.34 : 0.24]} />

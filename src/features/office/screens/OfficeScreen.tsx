@@ -4862,6 +4862,7 @@ export function OfficeScreen({
           gatewayToken={token}
           selectedAdapterType={selectedAdapterType}
           activeAdapterType={activeAdapterType}
+          suppressAgentNameplates={activeFloor.provider === "hermes"}
           onGatewayDisconnect={disconnect}
           onGatewayConnect={() => void connect()}
           onGatewayUrlChange={setGatewayUrl}

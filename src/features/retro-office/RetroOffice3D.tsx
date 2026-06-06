@@ -2327,6 +2327,7 @@ export function RetroOffice3D({
   gatewayToken = "",
   selectedAdapterType = "openclaw",
   activeAdapterType = "openclaw",
+  suppressAgentNameplates = false,
   runCountByAgentId = EMPTY_NUMBER_RECORD,
   lastSeenByAgentId = EMPTY_NUMBER_RECORD,
   streamingTextByAgentId = {},
@@ -2443,6 +2444,7 @@ export function RetroOffice3D({
   gatewayToken?: string;
   selectedAdapterType?: StudioGatewayAdapterType;
   activeAdapterType?: StudioGatewayAdapterType;
+  suppressAgentNameplates?: boolean;
   runCountByAgentId?: Record<string, number>;
   lastSeenByAgentId?: Record<string, number>;
   streamingTextByAgentId?: Record<string, string | null>;
@@ -5837,6 +5839,7 @@ export function RetroOffice3D({
                     suppressSceneSpeechBubbles &&
                     standupMeeting?.currentSpeakerAgentId !== agent.id
                   }
+                  suppressNameplate={suppressAgentNameplates && hoveredAgentId !== agent.id}
                 />
               );
             })}
