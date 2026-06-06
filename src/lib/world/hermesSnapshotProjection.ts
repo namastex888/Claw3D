@@ -105,6 +105,7 @@ export type HermesTowerProjection = {
   title: "Khaw Tower";
   truth: HermesTruthLabel;
   source: string;
+  observedAt: number;
   president: KhawTowerPresident;
   lobby: {
     version: string | null;
@@ -396,6 +397,7 @@ export function projectHermesSnapshotToTower(snapshot: HermesSnapshot): HermesTo
     title: "Khaw Tower",
     truth: snapshot.truth,
     source: snapshot.server.url,
+    observedAt: snapshot.at,
     president: buildPresident(snapshot),
     lobby: {
       version: snapshot.server.version,
