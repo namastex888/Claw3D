@@ -16,6 +16,10 @@ vi.mock("@/lib/runtime/createRuntimeProvider", () => ({
   createRuntimeProvider: providerHandlers.createRuntimeProvider,
 }));
 
+vi.mock("@react-three/drei", () => ({
+  Html: ({ children }: { children: React.ReactNode }) => React.createElement("div", { "data-testid": "mock-r3f-html" }, children),
+}));
+
 const snapshot: HermesSnapshot = {
   at: 1_770_000_000_000,
   truth: "OBSERVED",
@@ -63,6 +67,18 @@ describe("KhawTowerWorldSemanticsLayer", () => {
       throw new Error("world semantics layer must use the runtime provider path");
     });
     vi.stubGlobal("fetch", directFetch);
+    const originalConsoleError = console.error;
+    vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+      const message = args.map((arg) => String(arg ?? "")).join(" ");
+      if (
+        message.includes("incorrect casing") ||
+        message.includes("unrecognized in this browser") ||
+        message.includes("emissiveIntensity")
+      ) {
+        return;
+      }
+      originalConsoleError(...args);
+    });
 
     providerHandlers.createRuntimeProvider.mockReturnValue({
       id: "hermes-native",
@@ -101,6 +117,7 @@ describe("KhawTowerWorldSemanticsLayer", () => {
     render(React.createElement(KhawTowerWorldSemanticsLayer));
 
     await waitFor(() => expect(screen.getByTestId("khaw-world-semantics-layer")).toBeTruthy());
+    expect(screen.getByTestId("khaw-world-semantics-layer").getAttribute("data-khaw-world-semantics")).toBe("diegetic");
     expect(screen.getByText("World semantics")).toBeTruthy();
     expect(screen.getByText("Floor sign")).toBeTruthy();
     expect(screen.getByText("Room badge")).toBeTruthy();

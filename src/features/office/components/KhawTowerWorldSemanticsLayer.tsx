@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Html } from "@react-three/drei";
 
 import { createRuntimeProvider } from "@/lib/runtime/createRuntimeProvider";
 import type { HermesSnapshot } from "@/lib/runtime/hermes-native/types";
@@ -8,6 +9,9 @@ import { projectHermesSnapshotToTower } from "@/lib/world/hermesSnapshotProjecti
 import {
   projectTowerToWorldSemantics,
   type KhawTowerWorldSemantics,
+  type KhawWorldFloorSign,
+  type KhawWorldRoomBadge,
+  type KhawWorldWorkerPod,
 } from "@/lib/world/khawTowerWorldSemantics";
 
 type SnapshotState =
@@ -22,7 +26,16 @@ const truthChipClass = (truth: string): string => {
   return "border-amber-300/45 bg-amber-500/15 text-amber-100";
 };
 
-const renderTruthChip = (truth: string, reason: string) => (
+const truthMaterialColor = (truth: string): string =>
+  truth === "OBSERVED" ? "#10b981" : truth === "VERIFIED" ? "#22d3ee" : truth === "SIMULATED" ? "#8b5cf6" : "#f59e0b";
+
+const htmlPosition = (position: { x: number; y: number; z: number }): [number, number, number] => [
+  position.x,
+  position.y,
+  position.z,
+];
+
+const chip = (truth: string, reason: string) => (
   <span
     className={`inline-flex shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] uppercase tracking-[0.14em] ${truthChipClass(truth)}`}
     title={reason}
@@ -32,81 +45,114 @@ const renderTruthChip = (truth: string, reason: string) => (
   </span>
 );
 
-function WorldSemanticsView({ world }: { world: KhawTowerWorldSemantics }) {
+function FloorSignObject({ sign }: { sign: KhawWorldFloorSign }) {
+  return (
+    <group position={htmlPosition(sign.position)} data-khaw-spatial-object="floor-sign">
+      <mesh position={[0, -0.12, -0.04]}>
+        <boxGeometry args={[2.45, 0.92, 0.08]} />
+        <meshStandardMaterial color="#0f172a" emissive="#083344" emissiveIntensity={0.18} />
+      </mesh>
+      <mesh position={[1.04, 0.22, 0.02]}>
+        <boxGeometry args={[0.26, 0.18, 0.1]} />
+        <meshStandardMaterial color={truthMaterialColor(sign.truth)} emissive={truthMaterialColor(sign.truth)} emissiveIntensity={0.35} />
+      </mesh>
+      <Html transform center distanceFactor={5.5} position={[0, 0, 0.08]}>
+        <div
+          className="w-[170px] rounded-xl border border-cyan-200/25 bg-slate-950/88 p-2 font-mono text-white shadow-2xl backdrop-blur-sm"
+          data-khaw-floor-sign={sign.label}
+          data-khaw-world-diegetic="floor-sign"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[9px] uppercase tracking-[0.18em] text-cyan-100/60">Floor sign</div>
+            {chip(sign.truth, sign.truthChip.reason)}
+          </div>
+          <div className="mt-1 truncate text-[12px] font-semibold text-white">{sign.label}</div>
+          <div className="mt-1 truncate text-[10px] text-white/58">
+            {sign.laneLabel} · {sign.roomCount} room{sign.roomCount === 1 ? "" : "s"}
+          </div>
+          <div className="mt-1 truncate text-[9px] text-white/42">{sign.reason}</div>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function RoomBadgeObject({ badge }: { badge: KhawWorldRoomBadge }) {
+  return (
+    <group position={htmlPosition(badge.position)} data-khaw-spatial-object="room-badge">
+      <mesh position={[0, -0.08, -0.03]}>
+        <boxGeometry args={[2.25, 0.72, 0.06]} />
+        <meshStandardMaterial color="#1f1028" emissive="#4a044e" emissiveIntensity={0.14} />
+      </mesh>
+      <Html transform center distanceFactor={5.5} position={[0, 0, 0.08]}>
+        <div
+          className="w-[155px] rounded-lg border border-fuchsia-200/20 bg-black/82 p-2 font-mono text-white shadow-xl backdrop-blur-sm"
+          data-khaw-room-badge={badge.label}
+          data-khaw-world-diegetic="room-badge"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[9px] uppercase tracking-[0.18em] text-fuchsia-100/62">Room badge</div>
+            {chip(badge.truth, badge.truthChip.reason)}
+          </div>
+          <div className="mt-1 truncate text-[11px] font-semibold text-white/90">{badge.label}</div>
+          <div className="mt-1 truncate text-[9px] text-white/55">
+            {badge.persona} · {badge.source ?? "unknown source"} · {badge.freshness}
+          </div>
+          <div className="mt-1 truncate text-[9px] text-white/40">model: {badge.model ?? "unknown"}</div>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function WorkerPodObject({ pod }: { pod: KhawWorldWorkerPod }) {
+  return (
+    <group position={htmlPosition(pod.position)} data-khaw-spatial-object="worker-pod">
+      <mesh position={[-0.82, 0, 0]}>
+        <sphereGeometry args={[0.16, 16, 12]} />
+        <meshStandardMaterial color={truthMaterialColor(pod.truth)} emissive={truthMaterialColor(pod.truth)} emissiveIntensity={0.28} />
+      </mesh>
+      <Html transform center distanceFactor={5.5} position={[0, 0, 0.08]}>
+        <div
+          className="w-[145px] rounded-full border border-emerald-200/20 bg-emerald-950/78 px-3 py-2 font-mono text-white shadow-xl backdrop-blur-sm"
+          data-khaw-worker-pod={pod.label}
+          data-khaw-world-diegetic="worker-pod"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="truncate text-[10px] font-semibold text-emerald-50">{pod.label}</div>
+            {chip(pod.truth, pod.truthChip.reason)}
+          </div>
+          <div className="mt-0.5 truncate text-[9px] text-emerald-50/58">worker pod · {pod.model ?? "unknown model"}</div>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function WorldSemanticsObjects({ world }: { world: KhawTowerWorldSemantics }) {
   const floorSigns = world.floorSigns.slice(0, 3);
   const roomBadges = world.roomBadges.slice(0, 3);
   const workerPods = world.workerPods.slice(0, 3);
 
   return (
-    <div
-      className="pointer-events-none absolute inset-0 z-30 font-mono text-white"
-      aria-label="Khaw Tower world semantic signs"
-      data-testid="khaw-world-semantics-layer"
-      data-khaw-world-semantics="active"
+    <group
+      aria-label="Khaw Tower diegetic world semantic signs"
     >
-      <div className="absolute left-[272px] right-[400px] top-3 rounded-xl border border-cyan-300/25 bg-black/68 px-3 py-2 shadow-xl backdrop-blur-sm">
-        <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-100/75">World semantics</div>
-        <div className="mt-1 text-[11px] text-white/72">{world.summary}</div>
-      </div>
-
-      <div className="absolute bottom-24 left-[272px] right-[400px] top-[96px] grid grid-rows-[auto_auto_auto] gap-2 overflow-hidden">
-        <div className="grid grid-cols-3 gap-2">
-          {floorSigns.map((sign) => (
-            <div
-              key={sign.id}
-              className="min-w-0 rounded-xl border border-cyan-200/25 bg-slate-950/80 p-2 shadow-2xl backdrop-blur-sm"
-              data-khaw-floor-sign={sign.label}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="text-[9px] uppercase tracking-[0.18em] text-cyan-100/60">Floor sign</div>
-                {renderTruthChip(sign.truth, sign.truthChip.reason)}
-              </div>
-              <div className="mt-1 truncate text-[12px] font-semibold text-white">{sign.label}</div>
-              <div className="mt-1 truncate text-[10px] text-white/58">
-                {sign.laneLabel} · {sign.roomCount} room{sign.roomCount === 1 ? "" : "s"}
-              </div>
-              <div className="mt-1 truncate text-[9px] text-white/42">{sign.reason}</div>
-            </div>
-          ))}
+      <Html transform center distanceFactor={6} position={[0, 3.85, -4.8]}>
+        <div
+          className="w-[285px] rounded-xl border border-cyan-300/25 bg-black/72 px-3 py-2 font-mono text-white shadow-xl backdrop-blur-sm"
+          data-testid="khaw-world-semantics-layer"
+          data-khaw-world-semantics="diegetic"
+          data-khaw-world-diegetic="summary"
+        >
+          <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-100/75">World semantics</div>
+          <div className="mt-1 text-[11px] text-white/72">{world.summary}</div>
         </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          {roomBadges.map((badge) => (
-            <div
-              key={badge.id}
-              className="min-w-0 rounded-lg border border-fuchsia-200/20 bg-black/74 p-2 shadow-xl backdrop-blur-sm"
-              data-khaw-room-badge={badge.label}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="text-[9px] uppercase tracking-[0.18em] text-fuchsia-100/62">Room badge</div>
-                {renderTruthChip(badge.truth, badge.truthChip.reason)}
-              </div>
-              <div className="mt-1 truncate text-[11px] font-semibold text-white/90">{badge.label}</div>
-              <div className="mt-1 truncate text-[9px] text-white/55">
-                {badge.persona} · {badge.source ?? "unknown source"} · {badge.freshness}
-              </div>
-              <div className="mt-1 truncate text-[9px] text-white/40">model: {badge.model ?? "unknown"}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          {workerPods.map((pod) => (
-            <div
-              key={pod.id}
-              className="min-w-0 rounded-full border border-emerald-200/20 bg-emerald-950/68 px-3 py-2 shadow-xl backdrop-blur-sm"
-              data-khaw-worker-pod={pod.label}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="truncate text-[10px] font-semibold text-emerald-50">{pod.label}</div>
-                {renderTruthChip(pod.truth, pod.truthChip.reason)}
-              </div>
-              <div className="mt-0.5 truncate text-[9px] text-emerald-50/58">worker pod · {pod.model ?? "unknown model"}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+      </Html>
+      {floorSigns.map((sign) => <FloorSignObject key={sign.id} sign={sign} />)}
+      {roomBadges.map((badge) => <RoomBadgeObject key={badge.id} badge={badge} />)}
+      {workerPods.map((pod) => <WorkerPodObject key={pod.id} pod={pod} />)}
+    </group>
   );
 }
 
@@ -131,14 +177,20 @@ export function KhawTowerWorldSemanticsLayer() {
       setState({ status: "ready", snapshot, error: null });
     });
 
-    void provider.connect({ gatewayUrl: "/api/hermes/snapshot" }).catch((error) => {
-      if (cancelled) return;
-      setState({
-        status: "error",
-        snapshot: null,
-        error: error instanceof Error ? error.message : "Hermes world semantics snapshot failed.",
-      });
-    });
+    void (async () => {
+      try {
+        await provider.connect({ gatewayUrl: "/api/hermes/snapshot" });
+        const snapshot = await provider.call<HermesSnapshot>("hermes.snapshot", {});
+        if (!cancelled) setState({ status: "ready", snapshot, error: null });
+      } catch (error) {
+        if (cancelled) return;
+        setState({
+          status: "error",
+          snapshot: null,
+          error: error instanceof Error ? error.message : "Hermes world semantics snapshot failed.",
+        });
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -156,19 +208,23 @@ export function KhawTowerWorldSemanticsLayer() {
     });
   }, [state.snapshot]);
 
-  if (world) return <WorldSemanticsView world={world} />;
+  if (world) return <WorldSemanticsObjects world={world} />;
 
   if (state.status === "error") {
     return (
-      <div className="pointer-events-none absolute left-[272px] top-3 z-30 rounded-xl border border-amber-300/30 bg-black/70 px-3 py-2 font-mono text-[11px] text-amber-100 shadow-xl backdrop-blur-sm">
-        World semantics GAP: {state.error}
-      </div>
+      <Html transform center distanceFactor={10} position={[0, 3.85, -4.8]}>
+        <div className="rounded-xl border border-amber-300/30 bg-black/75 px-3 py-2 font-mono text-[11px] text-amber-100 shadow-xl backdrop-blur-sm">
+          World semantics GAP: {state.error}
+        </div>
+      </Html>
     );
   }
 
   return (
-    <div className="pointer-events-none absolute left-[272px] top-3 z-30 rounded-xl border border-white/15 bg-black/60 px-3 py-2 font-mono text-[11px] text-white/60 shadow-xl backdrop-blur-sm">
-      Loading Khaw Tower world semantics…
-    </div>
+    <Html transform center distanceFactor={10} position={[0, 3.85, -4.8]}>
+      <div className="rounded-xl border border-white/15 bg-black/65 px-3 py-2 font-mono text-[11px] text-white/60 shadow-xl backdrop-blur-sm">
+        Loading Khaw Tower world semantics…
+      </div>
+    </Html>
   );
 }

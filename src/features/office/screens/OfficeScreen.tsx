@@ -141,7 +141,6 @@ import {
   type HQSidebarTab,
 } from "@/features/office/components/HQSidebar";
 import { HermesTowerPanel } from "@/features/office/components/HermesTowerPanel";
-import { KhawTowerWorldSemanticsLayer } from "@/features/office/components/KhawTowerWorldSemanticsLayer";
 import { CompanyBuilderModal } from "@/features/company-builder/components/CompanyBuilderModal";
 import {
   buildGenerateCompanyPlanPrompt,
@@ -4948,7 +4947,6 @@ export function OfficeScreen({
             void taskBoard.refreshCronJobs();
           }}
         />
-        <KhawTowerWorldSemanticsLayer />
         {jukeboxOpen ? (
           soundclawReady ? (
             <JukeboxPanel
