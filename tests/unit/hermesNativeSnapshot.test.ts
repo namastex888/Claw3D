@@ -224,6 +224,11 @@ describe("Khaw Tower snapshot projection", () => {
     expect(labsFloor).toMatchObject({
       laneId: "labs-university",
       placement: { source: "repo-rule", truth: "GAP" },
+      provenance: {
+        nameSource: "session-title",
+        placementReason: "repo rule",
+        truthReason: "floor grouping is inferred until Hermes provides first-class Wish IDs",
+      },
     });
 
     const officeFloor = tower.floors.find((floor) => floor.rooms.some((room) => room.id === "sess_office"));

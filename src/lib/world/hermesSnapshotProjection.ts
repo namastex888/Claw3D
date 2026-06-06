@@ -83,6 +83,13 @@ export type HermesTowerRoom = {
   desks: HermesTowerDesk[];
 };
 
+export type HermesTowerFloorProvenance = {
+  nameSource: "session-title" | "cwd-path" | "unknown";
+  nameEvidence: string | null;
+  placementReason: string;
+  truthReason: string;
+};
+
 export type HermesTowerFloor = {
   id: string;
   label: string;
@@ -90,6 +97,7 @@ export type HermesTowerFloor = {
   truth: HermesTruthLabel;
   association: "verified" | "inferred" | "unassigned";
   placement: KhawTowerWishPlacement;
+  provenance: HermesTowerFloorProvenance;
   rooms: HermesTowerRoom[];
 };
 
@@ -172,12 +180,25 @@ const pathWorkstreamTitle = (cwd: string | null): string | null => {
 const normalizeWorkstreamTitle = (value: string): string =>
   titleCase(value.trim().replace(TRAILING_RESUME_COUNTER_RE, ""));
 
-const extractWishTitle = (session: HermesSessionNode): string | null => {
+type WorkstreamIdentity = {
+  title: string | null;
+  nameSource: HermesTowerFloorProvenance["nameSource"];
+  nameEvidence: string | null;
+};
+
+const extractWishIdentity = (session: HermesSessionNode): WorkstreamIdentity => {
   const title = session.title.trim();
   const pathTitle = pathWorkstreamTitle(session.cwd);
-  if (title && GENERIC_SESSION_TITLE_RE.test(title) && pathTitle) return pathTitle;
-  if (title) return normalizeWorkstreamTitle(title);
-  return pathTitle;
+  if (title && GENERIC_SESSION_TITLE_RE.test(title) && pathTitle) {
+    return { title: pathTitle, nameSource: "cwd-path", nameEvidence: session.cwd };
+  }
+  if (title) {
+    return { title: normalizeWorkstreamTitle(title), nameSource: "session-title", nameEvidence: session.title };
+  }
+  if (pathTitle) {
+    return { title: pathTitle, nameSource: "cwd-path", nameEvidence: session.cwd };
+  }
+  return { title: null, nameSource: "unknown", nameEvidence: null };
 };
 
 const classifyWishPlacement = (session: HermesSessionNode): KhawTowerWishPlacement => {
@@ -301,6 +322,24 @@ const buildPresident = (snapshot: HermesSnapshot): KhawTowerPresident => ({
 const floorLastActiveAt = (floor: HermesTowerFloor): number =>
   Math.max(0, ...floor.rooms.map((room) => room.lastActiveAt ?? 0));
 
+const placementReason = (source: KhawTowerPlacementSource): string =>
+  source === "unknown" ? "unknown placement" : source.replace(/-/g, " ");
+
+const truthReason = (placement: KhawTowerWishPlacement): string =>
+  placement.truth === "GAP"
+    ? "floor grouping is inferred until Hermes provides first-class Wish IDs"
+    : "directly provided by Hermes snapshot";
+
+const buildFloorProvenance = (
+  identity: WorkstreamIdentity,
+  placement: KhawTowerWishPlacement,
+): HermesTowerFloorProvenance => ({
+  nameSource: identity.nameSource,
+  nameEvidence: identity.nameEvidence,
+  placementReason: placementReason(placement.source),
+  truthReason: truthReason(placement),
+});
+
 const buildLanes = (floors: HermesTowerFloor[]): KhawTowerLane[] =>
   LANE_DEFINITIONS.map((lane) => {
     const laneFloors = floors.filter((floor) => floor.laneId === lane.id);
@@ -316,11 +355,11 @@ export function projectHermesSnapshotToTower(snapshot: HermesSnapshot): HermesTo
   const floorsById = new Map<string, HermesTowerFloor>();
 
   for (const session of snapshot.sessions) {
-    const inferredTitle = extractWishTitle(session);
+    const identity = extractWishIdentity(session);
     const placement = classifyWishPlacement(session);
     const association: HermesTowerFloor["association"] =
       placement.source === "unknown" ? "unassigned" : "inferred";
-    const label = inferredTitle ? titleCase(inferredTitle) : "Ground Floor / Unassigned";
+    const label = identity.title ? titleCase(identity.title) : "Ground Floor / Unassigned";
     const id = `${placement.laneId}:wish:${slugify(label)}`;
     const room = buildRoom(session);
     const existing = floorsById.get(id);
@@ -334,6 +373,7 @@ export function projectHermesSnapshotToTower(snapshot: HermesSnapshot): HermesTo
         truth: placement.truth,
         association,
         placement,
+        provenance: buildFloorProvenance(identity, placement),
         rooms: [room],
       });
     }
