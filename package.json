@@ -3,6 +3,9 @@
   "version": "0.1.4",
   "private": true,
   "license": "MIT",
+  "engines": {
+    "node": ">=22 <23"
+  },
   "scripts": {
     "dev": "node server/index.js --dev",
     "dev:https": "node server/index.js --dev --https",
