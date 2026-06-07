@@ -4,6 +4,7 @@ import {
   DEFAULT_ACTIVE_FLOOR_ID,
   getOfficeFloor,
   getAdjacentEnabledOfficeFloorId,
+  listAvailableFloorsForAdapter,
   listEnabledOfficeFloors,
   listOfficeFloorsForProvider,
   listOfficeFloorsForZone,
@@ -39,15 +40,35 @@ describe("office floor registry", () => {
     });
   });
 
-  it("lists only enabled floors by default", () => {
+  it("quarantines the OpenClaw floor from default navigation", () => {
     expect(listEnabledOfficeFloors().map((floor) => floor.id)).toEqual([
       "lobby",
-      "openclaw-ground",
       "hermes-first",
       "local-runtime",
       "claw3d-runtime",
       "custom-second",
     ]);
+    expect(listAvailableFloorsForAdapter("openclaw").map((floor) => floor.id)).toEqual([
+      "lobby",
+    ]);
+  });
+
+  it("restores the OpenClaw floor only behind the explicit legacy runtime flag", () => {
+    const previousLegacyRuntime = process.env.LEGACY_RUNTIME;
+    process.env.LEGACY_RUNTIME = "1";
+    try {
+      expect(listEnabledOfficeFloors().map((floor) => floor.id)).toContain("openclaw-ground");
+      expect(listAvailableFloorsForAdapter("openclaw").map((floor) => floor.id)).toEqual([
+        "lobby",
+        "openclaw-ground",
+      ]);
+    } finally {
+      if (previousLegacyRuntime === undefined) {
+        delete process.env.LEGACY_RUNTIME;
+      } else {
+        process.env.LEGACY_RUNTIME = previousLegacyRuntime;
+      }
+    }
   });
 
   it("lists floors for a provider", () => {
@@ -81,7 +102,7 @@ describe("office floor registry", () => {
   });
 
   it("cycles across enabled floors only", () => {
-    expect(getAdjacentEnabledOfficeFloorId("lobby", 1)).toBe("openclaw-ground");
+    expect(getAdjacentEnabledOfficeFloorId("lobby", 1)).toBe("hermes-first");
     expect(getAdjacentEnabledOfficeFloorId("lobby", -1)).toBe("custom-second");
   });
 });

@@ -29,9 +29,16 @@ export type FloorDefinition = {
   kind: FloorKind;
   zone: FloorZone;
   enabled: boolean;
+  requiresLegacyRuntime?: boolean;
   sortOrder: number;
   runtimeProfileId: string | null;
 };
+
+const isLegacyRuntimeEnabled = (): boolean =>
+  process.env.LEGACY_RUNTIME === "1" || process.env.NEXT_PUBLIC_LEGACY_RUNTIME === "1";
+
+const isOfficeFloorEnabled = (floor: FloorDefinition): boolean =>
+  floor.enabled && (!floor.requiresLegacyRuntime || isLegacyRuntimeEnabled());
 
 export const OFFICE_FLOORS: readonly FloorDefinition[] = [
   {
@@ -53,6 +60,7 @@ export const OFFICE_FLOORS: readonly FloorDefinition[] = [
     kind: "runtime",
     zone: "building",
     enabled: true,
+    requiresLegacyRuntime: true,
     sortOrder: 10,
     runtimeProfileId: "openclaw-default",
   },
@@ -148,7 +156,7 @@ const FLOOR_BY_ID: Readonly<Record<FloorId, FloorDefinition>> = OFFICE_FLOORS.re
 export const getOfficeFloor = (floorId: FloorId): FloorDefinition => FLOOR_BY_ID[floorId];
 
 export const listEnabledOfficeFloors = (): FloorDefinition[] =>
-  OFFICE_FLOORS.filter((floor) => floor.enabled);
+  OFFICE_FLOORS.filter(isOfficeFloorEnabled);
 
 export const listOfficeFloorsForProvider = (provider: FloorProvider): FloorDefinition[] =>
   OFFICE_FLOORS.filter((floor) => floor.provider === provider);
@@ -175,7 +183,7 @@ export const listAvailableFloorsForAdapter = (
   activeAdapterType: FloorProvider | "demo" | null | undefined,
 ): FloorDefinition[] => {
   return OFFICE_FLOORS.filter((floor) => {
-    if (!floor.enabled) return false;
+    if (!isOfficeFloorEnabled(floor)) return false;
     if (floor.kind === "lobby") return true;
     if (floor.kind === "runtime") {
       return (
